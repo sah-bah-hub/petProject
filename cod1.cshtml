@@ -1,0 +1,727 @@
+@using Newtonsoft.Json.Linq
+@using Devart.Data.PostgreSql
+@using EleWise.ELMA.CRM.Models
+@using EleWise.ELMA.CRM.Web.Models
+@using EleWise.ELMA.ConfigurationModel
+@using EleWise.ELMA.Model.Managers
+@using EleWise.ELMA.API
+@using EleWise.ELMA.Helpers
+@using EleWise.ELMA.Security.Managers;
+@using EleWise.ELMA.Security.Models;
+@using EleWise.ELMA.Security.Services;
+
+@using ViewType = EleWise.ELMA.Model.Views.ViewType
+
+@{
+    var curUser = PublicAPI.Portal.Security.User.GetCurrentUser(); // Админ=1, РК=16, КНК=32, КТО=53, ПКТО=73, ПКНК(МОС)=33, РОП=27
+    var userGroupsSeo = PublicAPI.Portal.Security.UserGroup.FindByIdArray(
+        new long[] { 16,87,32,108 }
+    ).SelectMany(x => x.Users).Where(x => PublicAPI.Portal.Security.User.IsActive(x) ).Select(x => x.Id);
+}
+@if(userGroupsSeo.Contains( curUser.Id )){
+
+    string query = @"SELECT
+    rd.summaekvivalentnayaezhemesya,
+    rd.naimenovanievygodopriobretat,
+    contractor.id,
+    rd.datanachaladeystviyadogovora,
+    rd.dataokonchaniyadeystviyadogo,
+    (
+        CASE
+            WHEN u.fullname IS NULL THEN 'Мос не назначен'
+            ELSE u.fullname
+        END
+    ),
+    rd.nomerdogovora,
+    rd.id,
+    rd.summaprishedshihoplat,
+    (
+        CASE
+            WHEN rd.statuspodpisaniyadogovora_v2 = 0 THEN 'Черновик'
+            WHEN rd.statuspodpisaniyadogovora_v2 = 1 THEN 'Не отправлен'
+            WHEN rd.statuspodpisaniyadogovora_v2 = 2 THEN 'На согласовании'
+            WHEN rd.statuspodpisaniyadogovora_v2 = 3 THEN 'Отменен перед согласованием'
+            WHEN rd.statuspodpisaniyadogovora_v2 = 4 THEN 'Отменен'
+            WHEN rd.statuspodpisaniyadogovora_v2 = 11 THEN 'Предварительно согласован'
+            WHEN rd.statuspodpisaniyadogovora_v2 = 12 THEN 'Согласован'
+        END
+    ),
+    (
+        CASE
+            WHEN rd.prichinaregistraciidog_v2 = 0 THEN 'Продажа'
+            WHEN rd.prichinaregistraciidog_v2 = 1 THEN 'Допродажа'
+            WHEN rd.prichinaregistraciidog_v2 = 2 THEN 'Восстановление'
+            WHEN rd.prichinaregistraciidog_v2 = 3 THEN 'Перезаключение - уменьшение'
+            WHEN rd.prichinaregistraciidog_v2 = 4 THEN 'Перезаключение - продажа'
+            WHEN rd.prichinaregistraciidog_v2 = 11 THEN 'Перезаключение - сохранение'
+            WHEN rd.prichinaregistraciidog_v2 = 12 THEN 'Перезаключение - увеличение'
+            WHEN rd.prichinaregistraciidog_v2 = 13 THEN 'Перезаключение - уменьшение'
+            WHEN rd.prichinaregistraciidog_v2 = 14 THEN 'Перезаключение - бесплатно'
+        END
+    ),
+    pu.naimenovanie
+FROM
+    reestrdogovorovver2 rd
+    LEFT JOIN contractor ON rd.naimenovanievygodopriobretat = contractor.""Name""
+    LEFT JOIN ""User"" u ON rd.mos = u.id
+    LEFT JOIN m_rdv2_paketyuslug mtm_pu ON mtm_pu.parent = rd.id
+    LEFT JOIN paketuslug_ pu ON pu.id = mtm_pu.child
+WHERE
+    rd.statuspodpisaniyadogovora_v2 in (11, 12)
+    AND datanachaladeystviyadogovora > '2019-01-01 00:00:00'
+    or rd.datapolucheniya1goplatezhapo is not NULL
+ORDER BY 2";
+    var conn = new PgSqlConnection("User Id=postgres;Password=123;host=127.0.0.1;port=5445;database=ELMA3;unicode=true");
+	var cmd = new PgSqlCommand(query,conn);
+    conn.Open();
+    var reader = cmd.ExecuteReader();
+
+    JObject names = new JObject();
+    JObject jdata = new JObject();
+    DateTime now = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 15);
+
+    List<String> dates = new List<String>();
+    for(var month = -6;month < 4;month++){
+        dates.Add(now.AddMonths(month).ToString("yyyy'/'MM"));
+    }
+    var months = dates.OrderByDescending(x => x);
+    JArray jdates = JArray.FromObject(months);
+
+    List<String> dates1 = new List<String>();
+    for(var month = -7;month < 4;month++){
+        dates1.Add(now.AddMonths(month).ToString("yyyy'/'MM"));
+    }
+    var months1 = dates1.OrderByDescending(x => x);
+    JArray jdates1 = JArray.FromObject(months1);
+
+    try {
+        while (reader.Read()) {
+            int summa = reader.GetInt32(0);
+            string contrgent = reader.GetString(1);
+            string contrgentid = reader.GetString(2);
+            DateTime start = reader.GetDateTime(3);
+            var dateStart = start.ToString("yyyy'/'MM");
+            DateTime end = reader.GetDateTime(4);
+            var dateEnd = end.ToString("yyyy'/'MM");
+            string name = reader.GetString(5);
+            string nomer = reader.GetString(6);
+            string nomerId = reader.GetString(7);
+            var Start = start.ToString("dd'.'MM'.'yy");
+            var End = end.ToString("dd'.'MM'.'yy");
+            int allSum = reader.GetInt32(8);
+            string status = reader.GetString(9);
+            string prichina = reader.GetString(10);
+            string pocket = reader.GetString(11);
+
+            if (names[contrgent] == null){
+                names[contrgent] = new JArray();}
+            ((JArray)names[contrgent]).Add(JObject.FromObject(new { summa = summa, contrgent = contrgent, contrgentid = contrgentid  , dateStart = dateStart, dateEnd = dateEnd, name = name, nomer = nomer, nomerId = nomerId , Start = Start, End = End, allSum = allSum, status = status, prichina = prichina, pocket = pocket}));
+        }
+    } finally {
+        reader.Close();
+    }
+    conn.Close();
+
+
+
+<style>
+#grid {
+padding:10px;
+background: white;
+}
+
+#tab {
+    width:100%;
+}
+
+#tab tr:nth-child(2n) {
+    background-color:#f1f9ff
+}
+
+#tab th {
+    padding:5px;
+}
+
+#tab td {
+    padding:5px;
+}
+
+#tab tr {
+    padding:5px;
+}
+
+#one {
+    width:15px;
+}
+
+#two {
+    width:45px;
+}
+
+#right{
+    text-align:right;
+}
+#left{
+    text-align:left;
+}
+#center{
+    text-align:center;
+}
+#qwe {
+  height: 15px; 
+  width: 15px;
+  }
+
+.progress {
+    cursor: progress;
+    }
+
+
+    #grid {
+        overflow-y: scroll;
+        max-height: 80vh;
+        width: 100%;
+    }
+    #tab_head tr th{
+        color: white;
+        background-color:#2E296C;
+        position: sticky;
+        top: -10px;
+    }
+    ::-webkit-scrollbar{
+        width:5px;
+        background-color: white;
+    }
+    ::-webkit-scrollbar-thumb{
+        border-radius:5px;
+        background-color:gray;
+    }
+
+</style>
+
+<div id="grid">
+
+    <table id="tab" border="1">
+        <thead> 
+            <tr>
+                <td colspan="22" id="center"><button class="progress"  @@click="fil(mes_pr,mes_pl,mes_ot,mes_mi,inf, dat1, total_plus, total_minus, otval, prival)">Применить {{mes_pr.length + mes_pl.length +mes_ot.length + mes_mi.length}} фильтров</button></td>
+            </tr>
+            <tr>
+                <td></td>
+                <td></td>
+                <td id="center" colspan="2" v-for="a in arr"> <input type="checkbox" id="qwe" @@click="colFil(mes_pr,mes_pl,mes_ot,mes_mi, a)"> </td>
+            </tr>
+            <tr>
+                <td> фильтр Привалов</td>
+                <td><input id="qwe" type="checkbox" @@click="dopFil(mes_pr, priv)"></td>
+                <td id="center" v-for="a in arr" colspan="2"><input type="checkbox" :value="a" v-model="mes_pr"></td>
+            </tr>
+            <tr>
+                <td> фильтр Увеличений </td>
+                <td><input id="qwe" type="checkbox" @@click="dopFil1(mes_pl, plus)" ></td>
+                <td id="center" v-for="a in arr" colspan="2"><input type="checkbox" :value="a" v-model="mes_pl"></td>
+            </tr>
+            <tr>
+                <td> фильтр Отвалов </td>
+                <td><input id="qwe" type="checkbox" @@click="dopFil2(mes_ot, otva)" ></td>
+                <td id="center" v-for="a in arr" colspan="2"><input type="checkbox" :value="a" v-model="mes_ot"></td>
+            </tr>
+            <tr>
+                <td> фильтр Уменьшений</td>
+                <td> <input id="qwe" type="checkbox" @@click="dopFil3(mes_mi, minu)" ></td>
+                <td id="center" v-for="a in arr" colspan="2"><input type="checkbox" :value="a" v-model="mes_mi"></td>
+            </tr>
+        </thead>
+        <thead id="tab_head"> 
+            <tr class="hovered">
+                <th colspan="2"></th>
+                <th v-for="month in dat" colspan="2">{{month}}</th>
+            </tr>
+        </thead>
+
+
+        <tbody class="centered" v-if="bool">
+            <tr>
+                <td></td>
+                <td></td>
+                <template v-for="sum in arr">
+                    <th id="center">сумм<br>оплат</th>
+                    <th id="center">кол-во<br>дог.</th>
+                </template>
+            </tr>
+            <tr>
+                <td id="left">текущий объем</td>
+                <td></td>
+                <template v-for="sum in TotalSum(this.JObj ,dat)">
+                    <th id="right" >{{sum[0]}}</th>
+                    <th id="right" >{{sum[1]}}</th>
+                </template>
+            </tr>
+            <tr is="prival" :prival="prival"></tr>
+            <tr is="plus" :total_plus="total_plus"></tr>
+            <tr is="otval" :otval="otval"></tr>
+            <tr is="minus" :total_minus="total_minus"></tr>
+            <tr v-for="value,name in this.JObj" id="name" :title=" '' + names1(value) + ''">
+                <td id="left"><a :href="'/CRM/ContractorLegal/Details/' + names(value, value)"> {{ name}}</a></td>
+                <td></td>
+                <td colspan="2" id="right" v-bind:style="sum[1]" v-for="sum in sum(value, dat1, dat, value, total_plus, total_minus, otval, prival)">{{sum[0]}} </td>
+            </tr>
+        </tbody>
+        <tbody class="centered" v-else> 
+            <tr>
+                <td></td>
+                <td></td>
+                <template v-for="sum in arr">
+                    <th id="center">сумм<br>оплат</th>
+                    <th id="center">кол-во<br>дог.</th>
+                </template>
+            </tr>
+            <tr>
+                <td id="left">текущий объем</td>
+                <td></td>
+                <template v-for="sum in TotalSum(inf ,dat)">
+                    <th id="right" >{{sum[0]}}</th>
+                    <th id="right" >{{sum[1]}}</th>
+                </template>
+            </tr>
+            <tr is="prival" :prival="prival"></tr>
+            <tr is="plus" :total_plus="total_plus"></tr>
+            <tr is="otval" :otval="otval"></tr>
+            <tr is="minus" :total_minus="total_minus"></tr>
+            <tr v-for="value,name in defald(inf, dat1)" id="name" :title=" '' + names1(value) + ''">   
+                <td id="left"><a :href="'/CRM/ContractorLegal/Details/' + names(value, value)"> {{ name}} </a></td>
+                <td></td>
+                <td colspan="2" id="right" v-bind:style="sum[1]" v-for="sum in sum(value, dat1, dat, value, total_plus, total_minus, otval, prival)">{{sum[0]}}</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+<div>
+Оборотный отчет, показывает привалы, увеличения, отвалы, уменьшения и суммы ежемесячных оплат. <br>
+Числа в каждом месяце это Суммы эквивалентные ежемесячному платежу всех активных договоров контрагента. <br>
+Привал обозначается ярко зелёным цветом и это контрагенты у которых в прошлом месяце сумма эквивалентная ежемесячному платежу была 0 договоров а в этом она увеличилась. <br>
+Увеличение обозначается темно зелёным цветом и это контрагенты у которых увеличилась сумма эквивалентная ежемесячному платежу. <br>
+Отвал обозначается ярко красным цветом и это контрагенты у которых сумма эквивалентная ежемесячному платежу стала 0 а в прошлом месяце она была больше нуля. <br>
+Уменьшение обозначается темно красным цветом и это контрагенты у которых сумма эквивалентная ежемесячному платежу уменьшилась. <br>
+При наведении на строку с контрагентом появляется всплывающие окно в котором находится информация по № договора,  дате начал обслуживания, дате окончания обслуживания, сумма эквивалента, сумма всех оплат, статус подписания , причина регистрации и пакет обслуживания. <br>
+Отчет построен на договорах, у которых статус подписания договора равен согласован или предварительно согласован и есть хотябы одна одлата .
+
+</div>
+<script>
+
+    var grid = new Vue({
+
+        el:"#grid",
+
+        data:{
+            inf: @Html.Raw(names),
+            dat: @Html.Raw(jdates),
+            dat1: @Html.Raw(jdates1),
+            mes_pr: [],
+            mes_pl: [],
+            mes_ot: [],
+            mes_mi: [],
+            JObj: {},
+            priv: false,
+            plus: false,
+            otva: false,
+            minu: false,
+            a: false,
+            b: false,
+            c: false,
+            d: false,
+            e: false,
+            f: false,
+            g: false,
+            h: false,
+            i: false,
+            j: false,
+            bool: false,
+            arr: [0,1,2,3,4,5,6,7,8,9],
+            total_plus:  [0,0,0,0,0,0,0,0,0,0],
+            total_minus: [0,0,0,0,0,0,0,0,0,0],
+            otval:  [0,0,0,0,0,0,0,0,0,0],
+            prival: [0,0,0,0,0,0,0,0,0,0],
+        },
+        methods:{
+            fil(mes_pr,mes_pl,mes_ot,mes_mi,inf, dat1, bool, total_plus, total_minus, otval, prival){
+                this.bool = true;
+                let filters = [mes_pr,mes_pl,mes_ot,mes_mi]; 
+                this.prival = [0,0,0,0,0,0,0,0,0,0];
+                this.otval = [0,0,0,0,0,0,0,0,0,0];
+                this.total_plus = [0,0,0,0,0,0,0,0,0,0];
+                this.total_minus = [0,0,0,0,0,0,0,0,0,0];
+                let val = Object.values(inf).flat();
+                if (filters[0].length == 0 && filters[1].length == 0 && filters[2].length == 0 && filters[3].length == 0) {
+                    let fil = [...new Set(val.filter(x => new Date(x.dateStart) <= new Date(dat1[0]) && new Date(x.dateEnd) >= new Date(dat1[10])).map(x => x.contrgent))];
+                    let obj = {};
+                    fil.forEach(element => {
+                        let fil1 = val.filter(x => x.contrgent == element);
+                        obj[element] = fil1
+                    });
+                    this.JObj = obj;
+                }
+                else{
+                    let arr = [];
+                    if (filters[0].length != 0) {
+                        filters[0].forEach(element => {
+                            let fil = [...new Set(val.filter(x => new Date(x.dateStart) <= new Date(dat1[element]) && new Date(x.dateEnd) >= new Date(dat1[element])).map(x => x.contrgent))];
+                            fil.forEach(element1 => {
+                                let fil1 = [...new Set(val.filter(x => new Date(x.dateStart) <= new Date(dat1[element]) && new Date(x.dateEnd) >= new Date(dat1[element]) && x.contrgent == element1))];
+                                let plus = fil1.reduce((acc,x) =>  acc += x.summa ,0);
+                                let fil2 = [...new Set(val.filter(x => new Date(x.dateStart) <= new Date(dat1[element + 1]) && new Date(x.dateEnd) >= new Date(dat1[element + 1]) && x.contrgent == element1))];
+                                let plus1 = fil2.reduce((acc,x) =>  acc += x.summa ,0);
+                                if (plus > plus1 && plus1 == 0) {
+                                    arr.push(element1)
+                                }
+                            });
+                        });
+                    }
+                    if (filters[1].length != 0) {
+                        filters[1].forEach(element => {
+                            let fil = [...new Set(val.filter(x => new Date(x.dateStart) <= new Date(dat1[element]) && new Date(x.dateEnd) >= new Date(dat1[element])).map(x => x.contrgent))];
+                            fil.forEach(element1 => {
+                                let fil1 = [...new Set(val.filter(x => new Date(x.dateStart) <= new Date(dat1[element]) && new Date(x.dateEnd) >= new Date(dat1[element]) && x.contrgent == element1))];
+                                let plus = fil1.reduce((acc,x) =>  acc += x.summa ,0);
+                                let fil2 = [...new Set(val.filter(x => new Date(x.dateStart) <= new Date(dat1[element + 1]) && new Date(x.dateEnd) >= new Date(dat1[element + 1]) && x.contrgent == element1))];
+                                let plus1 = fil2.reduce((acc,x) =>  acc += x.summa ,0);
+                                if (plus > plus1 && plus1 != 0) {
+                                    arr.push(element1)
+                                }
+                            });
+                        });                        
+                    }
+                    if (filters[2].length != 0) {
+                        filters[2].forEach(element => {
+                            let fil = [...new Set(val.filter(x => new Date(x.dateStart) <= new Date(dat1[element + 1]) && new Date(x.dateEnd) >= new Date(dat1[element + 1])).map(x => x.contrgent))];
+                            fil.forEach(element1 => {
+                                let fil1 = [...new Set(val.filter(x => new Date(x.dateStart) <= new Date(dat1[element]) && new Date(x.dateEnd) >= new Date(dat1[element]) && x.contrgent == element1))];
+                                let plus = fil1.reduce((acc,x) =>  acc += x.summa ,0);
+                                let fil2 = [...new Set(val.filter(x => new Date(x.dateStart) <= new Date(dat1[element + 1]) && new Date(x.dateEnd) >= new Date(dat1[element + 1]) && x.contrgent == element1))];
+                                let plus1 = fil2.reduce((acc,x) =>  acc += x.summa ,0);
+                                if (plus < plus1 && plus == 0) {
+                                    arr.push(element1)
+                                    
+                                }
+                            });
+                        });                        
+                    }
+                    if (filters[3].length != 0) {
+                        filters[3].forEach(element => {
+                            let fil4 = [...new Set(val.filter(x => new Date(x.dateStart) <= new Date(dat1[element]) && new Date(x.dateEnd) >= new Date(dat1[element])).map(x => x.contrgent))];
+                            fil4.forEach(element1 => {
+                                let fil1 = [...new Set(val.filter(x => new Date(x.dateStart) <= new Date(dat1[element]) && new Date(x.dateEnd) >= new Date(dat1[element]) && x.contrgent == element1))];
+                                let plus = fil1.reduce((acc,x) =>  acc += x.summa ,0);
+                                let fil2 = [...new Set(val.filter(x => new Date(x.dateStart) <= new Date(dat1[element + 1]) && new Date(x.dateEnd) >= new Date(dat1[element + 1]) && x.contrgent == element1))];
+                                let plus1 = fil2.reduce((acc,x) =>  acc += x.summa ,0);
+                                if (plus < plus1 && plus != 0) {
+                                    arr.push(element1)
+                                }
+                            });
+                        });                        
+                    }
+                    let set = new Set(arr);
+                    let obj = {};
+                    set.forEach(element => {
+                        let fil = val.filter(x => x.contrgent == element);
+                        obj[element] = fil
+                    });
+                    this.JObj = obj;
+                }              
+            },
+            defald(inf, dat1){
+                let val = Object.values(inf).flat();
+                let fil = [...new Set(val.filter(x => new Date(x.dateStart) <= new Date(dat1[0]) && new Date(x.dateEnd) >= new Date(dat1[10])).map(x => x.contrgent))];
+                let obj = {};
+                fil.forEach(element => {
+                    let fil1 = val.filter(x => x.contrgent == element);
+                    obj[element] = fil1
+                });
+                return obj;
+            },
+            names(con, name){
+                let fil = con.map(x => x.contrgentid);
+                return fil[0];
+            },
+            TotalSum(inf, dat){
+                let val = Object.values(inf).flat();
+                let int = [];
+                dat.forEach(element => {
+                    let fil = val.filter(x => new Date(x.dateStart) <= new Date(element) && new Date(x.dateEnd) >= new Date(element));
+                    let plus = fil.reduce((acc,x) =>  acc += x.summa ,0);
+                    let del = plus.toLocaleString('ru');
+                    let len = fil.length;
+                    let del1 = len.toLocaleString('ru');
+                    int.push([del, del1])
+
+                });
+                return int;
+            },
+            sum(con, dat1, dat, name, total_plus, total_minus, otval, prival){
+                let int = [];
+                let arr = [0,1,2,3,4,5,6,7,8,9]
+                arr.forEach(element => {
+                    let fil = [...new Set(con.filter(x => new Date(x.dateStart) <= new Date(dat1[element]) && new Date(x.dateEnd) >= new Date(dat1[element])) )];
+                    let plus = fil.reduce((acc,x) =>  acc += x.summa ,0);
+                    let del = plus.toLocaleString('ru');
+
+                    let fil1 = [...new Set(con.filter(x => new Date(x.dateStart) <= new Date(dat1[element + 1]) && new Date(x.dateEnd) >= new Date(dat1[element + 1])) )];
+                    let plus1 = fil1.reduce((acc,x) =>  acc += x.summa ,0);
+                    let col = "";
+                    let one = 0;
+                    if (plus > plus1 && plus1 == 0) {
+                        col = "color: lightgreen";
+                        one = plus - plus1;
+                        this.prival[element] += one;
+                    }
+                    else if (plus < plus1 && plus == 0) {
+                        col = "color: red";
+                        one = plus - plus1;
+                        one = one - one - one; 
+                        this.otval[element] += one
+                    }
+                    else if (plus > plus1 && plus != 0) {
+                        col = "color: green"
+                        one = plus - plus1;
+                        this.total_plus[element] += one;
+                    }
+                    else if (plus < plus1 && plus != 0) {
+                        col = "color: orange"
+                        one = plus - plus1;
+                        one = one - one - one; 
+                        this.total_minus[element] += one
+                    }
+                    else if (plus == 0) {
+                        col = "color: lightgray"
+                    }
+                    
+                    int.push([del, col]);
+                });
+                
+                return int;
+            },
+            names1(inf){
+                let fil = [...new Set(inf.map(x => [x.nomer, x.Start, x.End, x.summa, x.allSum, x.status, x.prichina, x.pocket]))];
+                let text = "№ дог  |  нач.обсл.  |  ок.обсл  |  сум.экв.  |  сум.оплат  |  стат.подпис.  |  причина  |  пакет.обслуж. \n";
+                fil.forEach(x => {
+                    text +='' + x[0] + '  |  '  + x[1] + '  |  '  + x[2] + '  |  '  + x[3] + '  |  '  + x[4] + '  |  '  + x[5] + '  |  '  + x[6] + '  |  '  + x[7] + '\n' ;
+                });
+                return text;
+            },
+            dopFil(array, priv){
+                this.priv = !this.priv;
+                if (this.priv == true) {
+                    array.push(0,1,2,3,4,5,6,7,8,9)
+                }
+                else if (this.priv == false) {
+                    let arr = [0,1,2,3,4,5,6,7,8,9]
+                    arr.forEach(element => {
+                        array.pop(9)
+                    });
+                }
+            },
+            dopFil1(array, plus){
+                this.plus = !this.plus;
+                if (this.plus == true) {
+                    array.push(0,1,2,3,4,5,6,7,8,9)
+                }
+                else if (this.plus == false) {
+                    let arr = [0,1,2,3,4,5,6,7,8,9]
+                    arr.forEach(element => {
+                        array.pop(9)
+                    });
+                }
+            },
+            dopFil2(array, otva){
+                this.otva = !this.otva;
+                if (this.otva == true) {
+                    array.push(0,1,2,3,4,5,6,7,8,9)
+                }
+                else if (this.otva == false) {
+                    let arr = [0,1,2,3,4,5,6,7,8,9]
+                    arr.forEach(element => {
+                        array.pop(9)
+                    });
+                }
+            },
+            dopFil3(array, minu){
+                this.minu = !this.minu;
+                if (this.minu == true) {
+                    array.push(0,1,2,3,4,5,6,7,8,9)
+                }
+                else if (this.minu == false) {
+                    let arr = [0,1,2,3,4,5,6,7,8,9]
+                    arr.forEach(element => {
+                        array.pop(9)
+                    });
+                }
+            },
+            colFil(array, array1, array2, array3, int){
+                var index = array.indexOf(int);
+                var index1 = array1.indexOf(int);
+                var index2 = array2.indexOf(int);
+                var index3 = array3.indexOf(int);
+
+                if (index == -1 || index1 == -1 || index2 == -1 || index3 == -1) {
+                    array.push(int)
+                    array1.push(int)
+                    array2.push(int)
+                    array3.push(int)
+                }
+                else {
+                    if (index > -1) {
+                        array.splice(index, 1);
+                    }
+                    if (index1 > -1) {
+                        array1.splice(index1, 1);
+                    }
+                    if (index2 > -1) {
+                        array2.splice(index2, 1);
+                    }
+                    if (index3 > -1) {
+                        array3.splice(index3, 1);
+                    }
+                }
+            },
+
+        },
+        components:{
+                "minus":{
+                    props:["total_minus"],
+                    methods:{
+                        allMinus(abc){
+                            let val = abc;
+                            let del = val.toLocaleString('ru');
+                            return del;
+                        }
+                    },
+                    template:`
+                        <tr>
+                            <td id="left">Уменьшение</td>
+                            <td></td>
+                            <td id="right" v-for="abc in this.total_minus" colspan="2">{{allMinus(abc)}}</td>
+                        </tr>
+                    `
+                },
+                "plus":{
+                    props:["total_plus"],
+                    methods:{
+                        allPlus(abc){
+                            let val = abc;
+                            let del = val.toLocaleString('ru');
+                            return del;
+                        }
+                    },
+                    template:`
+                        <tr>
+                            <td id="left">Увеличение</td>
+                            <td></td>
+                            <td id="right" v-for="abc in this.total_plus" colspan="2">{{allPlus(abc)}}</td>
+                        </tr>
+                    `
+                },
+                "otval":{
+                    props:["otval"],
+                    methods:{
+                        allMinus(abc){
+                            let val = abc;
+                            let del = val.toLocaleString('ru');
+                            return del;
+                        }
+                    },
+                    template:`
+                        <tr>
+                            <td id="left">Отвал</td>
+                            <td></td>
+                            <td id="right" v-for="abc in this.otval" colspan="2">{{allMinus(abc)}}</td>
+                        </tr>
+                    `
+                },
+                "prival":{
+                    props:["prival"],
+                    methods:{
+                        allPlus(abc){
+                            let val = abc;
+                            let del = val.toLocaleString('ru');
+                            return del;
+                        }
+                    },
+                    template:`
+                        <tr>
+                            <td id="left">Привал</td>
+                            <td></td>
+                            <td id="right" v-for="abc in this.prival" colspan="2">{{allPlus(abc)}}</td>
+                        </tr>
+                    `
+                },
+        },
+    });
+
+    let td = $("#tab tr td:nth-child(n+0):nth-child(-n+55)");
+
+    [].forEach.call(td,function(e){$(e).hover(HoverOn,HoverOut)});
+    function HoverOn(el){
+        $(el.target.parentNode).css("background-color", "#d5e8fd"); 
+        [].forEach.call(td,function(e){
+            if(e.cellIndex == el.target.cellIndex){
+                $(e).css("background-color", "#d5e8fd");
+            }
+        });
+    }
+    function HoverOut(el){
+        $(el.target.parentNode).css("background-color", ""); 
+        [].forEach.call(td,function(e){
+            if(e.cellIndex == el.target.cellIndex){
+                $(e).css("background-color", "");
+            }
+        });
+    }
+
+    $(function(){
+        let buttons = $("i");
+        buttons.each( (x,el) => {
+            $(el).bind('click',handler);
+            return
+        });
+        function handler(e) {
+            $(e.target).toggleClass("fa-plus-square fa-minus-square");
+        }
+    })
+
+    
+    $(function(){
+        let buttons = $("a");
+        buttons.each( (x,el) => {
+            $(el).bind('click',handler);
+            return
+        });
+        function handler(e) {
+            $(e.target).closest("tbody").find("#nam").toggleClass("fas fa-sort-down fas fa-sort-up");
+        }
+    })
+    
+</script>
+ } else{
+    <style>
+        #warning b{
+            color: red;
+            font-size:140px;
+        }
+        #warning{
+            margin: auto;
+            width: 60%;
+            border: 3px solid red;
+            padding: 10px;
+            text-align: center;
+            border-radius: 50px;
+        }
+    </style>
+
+    <div id="warning">
+        <b>⚠</b>
+        <h1>недостаточно прав для просмотра данного отчета</h1>
+        <a href="http://192.168.1.17:8000/ContentArea/Page/View/74?scope=User">вернутся на главную страницу отчетов</a>
+        <br>
+        <br>
+    </div>
+}
