@@ -2,13 +2,30 @@
 <html lang="en">
   <head>
     <script src="https://kit.fontawesome.com/ed7a96ce4d.js" crossorigin="anonymous"></script>
-    <meta charset="utf-8" /> 
+    <meta charset="utf-8" />
+ 
     <style type="text/css">
+      ::-webkit-scrollbar {
+        width: 7px;
+        background-color: rgba(0,0,0,100);
+      }
+
+      ::-webkit-scrollbar-thumb {
+        border-radius: 10px;
+        background: #1c1c1c;
+      }
+
+      ::-webkit-scrollbar-track {
+        -webkit-box-shadow: inset 0 0 6px rgba(0,0,0,0.2);
+        border-radius: 10px;
+        background-color: rgba(0,0,0,100);
+      }
       *{
         padding: 0px;
         margin: 0px;
       }
       p{
+        font-family: cursive;
       }
       .backgraund{
         width:  100%;
@@ -20,6 +37,7 @@
         background-color: #080404;
         border-radius: 10px;
         width: 300px;
+        /*max-width: 300px;*/
         height: 500px;
         position: absolute;
         left: 50%;
@@ -38,9 +56,15 @@
         transform: translate(-50%, -50%);
       }
       #timerString{
-        padding: 55px;
-        font-size: -webkit-xxx-large;
       }
+      #curTime {
+        padding-left: 1.5em;
+        font-family: system-ui;
+        color: gray;
+        font-size: 0.9em;
+        margin-top: -0.5em;
+      }
+
       .btn button{
         padding: 15px;
         border-radius: 50%;
@@ -50,11 +74,14 @@
         color: #2460a8;
         cursor: pointer;
       }
+      .btn button:hover{
+        background-color: #272727;
+      }
+      .btn button:active{
+        background-color: #303030;
+      }
       .hide{
         display: none;
-      }
-      .time{
-        height: 35%;
       }
       #log{
         height: 45%;
@@ -68,6 +95,15 @@
         float: left;
         width: -webkit-fill-available;
         padding: 0px 10px;
+        font-family: cursive;
+        transition: 0.3s;
+        opacity: 1;
+        height: 2.5em;
+      }
+      .newflagString{
+        opacity: 0;
+        height: 0;
+        transition: 0.3s;
       }
       .flagString div{
         float:  left;
@@ -80,14 +116,48 @@
         float: right;
       }
 
+      /*styles befor creating first flag*/
+      .flagWasCreated #timerString{
+        transition: 0.5s;
+        padding: 0.5em 0em 0em 0.5em ;
+        font-size: 2.5em;
+      }
+      .flagWasCreated #curTime{
+        opacity: 1;
+        transition: 0.5s;
+      }
+      .flagWasCreated .time{
+        transition: 0.5s;
+        height: 20%;
+      }
+      .flagWasCreated #log{
+        transition: 0.5s;
+        height: 60%;
+      }
+
+      /*styles after creating first flag*/
+      .flagWasntCreated #timerString{
+        transition: 0.5s;
+        padding: 1em;
+        font-size: -webkit-xxx-large;
+      }
+      .flagWasntCreated #curTime{
+        opacity: 0;
+      }
+      .flagWasntCreated .time{
+        height: 35%;
+      }
+      .flagWasntCreated #log{
+        height: 45%;
+      }
 
     </style>
   </head>
   <body class="backgraund">
-
-    <div class="timer" id="container">
+    <div class="timer flagWasntCreated" id="container">
       <div class="time">
         <p id="timerString">00:00.00</p>
+        <p id="curTime">Current time</p>
       </div>
       <div id="log">     
       </div>
@@ -121,19 +191,19 @@
         timeStart = new Date();
         interval = setInterval(updateTime,10);
 
-        var startBtn = document.getElementById("startBtn");
+        var startBtn = document.querySelector("#startBtn");
         startBtn.classList.add("hide");
 
-        var runingBtn = document.getElementById("runingBtn");
+        var runingBtn = document.querySelector("#runingBtn");
         runingBtn.classList.remove("hide");
       }
       function createFlag() {
         counter += 1;
         var now = new Date();
         let gap = now - timeStart;
-        var loggerElement = document.getElementById("log");
+        var loggerElement = document.querySelector("#log");
         var flagString = document.createElement("div");
-        flagString.classList.add("flagString");
+        flagString.classList.add("newflagString");
 
         var icoCcontainer = createDiv("" , "ico")
         var flagIco = document.createElement("i");
@@ -142,7 +212,9 @@
 
 
         if (loggerElement.children.length == 0) {
-          var timer = document.getElementsByClassName("timer")[0];
+          var timer = document.querySelector(".timer");
+          timer.classList.add("flagWasCreated")
+          timer.classList.remove("flagWasntCreated")
           difference = gap;
         } else{
           difference = now - timeLastflag;
@@ -150,17 +222,23 @@
         flagString.append(icoCcontainer, createDiv(zeroPad(counter,2), "counter") ,  createDiv("+ " + timeFormat(difference), "difference") , createDiv(timeFormat(gap), "gap"))
 
         loggerElement.prepend(flagString)
-    
+        setTimeout(() => {
+          flagString.classList.add("flagString");
+          flagString.classList.remove("newflagString");
+        }, 0)
+
+
+        
 
         timeLastflag = now;
       }
       function pauseTimer() {
         clearInterval(interval);
-        var runingBtn = document.getElementById("runingBtn");
+        var runingBtn = document.querySelector("#runingBtn");
         runingBtn.classList.add("hide");
 
 
-        var stopBtn = document.getElementById("stopBtn");
+        var stopBtn = document.querySelector("#stopBtn");
         stopBtn.classList.remove("hide");
         timePause = new Date() - timeStart 
       }
@@ -171,41 +249,42 @@
         timePause = null;
         timeStart = null
 
-        var loggerElement = document.getElementById("log").children;
+        var loggerElement = document.querySelector("#log").children;
         for (var i = loggerElement.length - 1; i >= 0; i--) {
           loggerElement[i].remove()
         }
 
-        var string = document.getElementById("timerString");
+        var string = document.querySelector("#timerString");
         string.innerText = '00:00.00'
 
-        var stopBtn = document.getElementById("stopBtn");
+        var stopBtn = document.querySelector("#stopBtn");
         stopBtn.classList.add("hide");
 
-        var runingBtn = document.getElementById("startBtn");
+        var runingBtn = document.querySelector("#startBtn");
         runingBtn.classList.remove("hide");
 
 
-        var timer = document.getElementsByClassName("timer")[0];
+        var timer = document.querySelector(".timer");
+        timer.classList.add("flagWasntCreated")
+        timer.classList.remove("flagWasCreated")
       }
       function playTimer() {
         timeStart = new Date() - timePause ;
         interval = setInterval(updateTime,10);
 
-        var stopBtn = document.getElementById("stopBtn");
+        var stopBtn = document.querySelector("#stopBtn");
         stopBtn.classList.add("hide");
 
-        var runingBtn = document.getElementById("runingBtn");
+        var runingBtn = document.querySelector("#runingBtn");
         runingBtn.classList.remove("hide");
       }
+
       function createDiv(text, className) {
         var div = document.createElement("div");
         div.innerText = text;
         div.classList.add(className);
         return div
       }
-      
-      
       function timeFormat(gap) {
         let minets =  Math.floor(gap / 1000 / 60) % 60;
         let seconds =  Math.floor(gap / 1000) % 60;
@@ -220,13 +299,15 @@
         let seconds =  Math.floor(gap / 1000) % 60;
         let milesecond = Math.floor(gap / 10) % 100;
 
-        var string = document.getElementById("timerString");
+        var string = document.querySelector("#timerString");
 
         string.innerText = zeroPad(minets,2) + ":" + zeroPad(seconds,2) + "." + zeroPad(milesecond,2);
       }
       function zeroPad(num, places) {
         return String(num).padStart(places, '0')
       }
+
+
     </script>
   </body>
 </html>
