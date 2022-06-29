@@ -4,7 +4,7 @@
     <script src="https://kit.fontawesome.com/ed7a96ce4d.js" crossorigin="anonymous"></script>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width">
- 
+    <script src="https://cdn.jsdelivr.net/npm/vue@2/dist/vue.js"></script>
     <style type="text/css">
       ::-webkit-scrollbar {
         width: 7px;
@@ -83,7 +83,9 @@
         background-color: black;
         color: gray;
         font-size: larger;
-        transition: 0.3s;
+        transition: 0.1s;
+        border-radius: 50%;
+        border: none;
       }
       .selected{
         color: #2460a8 !important;
@@ -206,24 +208,24 @@
       }
       .flagWasntCreated #log{
         height: 45%;
+        transition: 0.5s;
       }
-
     </style>
   </head>
   <body class="backgraund">
     <div id="container">
       <div class="tabSelectorBtn">
         <button class="Alarm selected">
-          <i onclick="selectTab('Alarm')" class="fa fa-bell"></i>
+          <i @click="selectTab('Alarm')" class="fa fa-bell"></i>
         </button>
         <button class="Clock">
-          <i onclick="selectTab('Clock')" class="fa fa-clock"></i>
+          <i @click="selectTab('Clock')" class="fa fa-clock"></i>
         </button>
         <button class="StopWatch">
-          <i onclick="selectTab('StopWatch')" class="fa fa-stopwatch"></i>
+          <i @click="selectTab('StopWatch')" class="fa fa-stopwatch"></i>
         </button>
         <button class="Timer">
-          <i onclick="selectTab('Timer')" class="fa fa-hourglass"></i>
+          <i @click="selectTab('Timer')" class="fa fa-hourglass"></i>
         </button>
       </div>
       <div class="sliderContainer">
@@ -235,36 +237,10 @@
           </div>
           <div class="Clock">
             <div>
-              content stub Clock <i onclick="selectTab('clock')" class="fa fa-clock"></i>
+              content stub Clock <i class="fa fa-clock"></i>
             </div>
           </div>
-          <div class="StopWatch flagWasntCreated">
-            <div class="time show">
-              <p id="StopWatchString">00:00.00</p>
-              <p id="curTime">Current time</p>
-            </div>
-            <div id="log">     
-            </div>
-            <div class="btn">
-              <div id="startBtn">
-                <div>
-                  <button title="play" onclick="startStopWatch()" ><i class="fa fa-play"></i></button>
-                </div>
-              </div>
-              <div id="runingBtn" class="hide">
-                <div>
-                  <button title="flag"  onclick="createFlag()"><i class="fa fa-flag"></i></button>
-                  <button title="pause" onclick="pauseStopWatch()"><i class="fa fa-pause"></i></button>
-                </div>
-              </div>
-              <div id="stopBtn" class="hide">
-                <div>
-                  <button title="stop" onclick="stopStopWatch()"><i class="fa fa-stop"></i></button>
-                  <button title="play" onclick="playStopWatch()"><i class="fa fa-play"></i></button>
-                </div>
-              </div>
-            </div>
-          </div>
+          <div is="StopWatch"></div>
           <div class="Timer">
             <div>
               content stub Timer <i class="fa fa-hourglass"></i>
@@ -273,144 +249,189 @@
         </div>
       </div>
     </div>
-    <script type="text/javascript">      
-      let tabArray = ["Alarm","Clock","StopWatch","Timer"]
-      let interval = null; 
-      var timeStart = null;
-      var timePause = null;
-      let counter = 0;
-      let timeLastflag = null;
-      document.querySelector(".sliderContainer").addEventListener("scroll",(el) =>{
-        var lastSelected = document.querySelector(".selected");
-        lastSelected.classList.remove("selected");
+    <script type="text/javascript">  
 
-        var newSelected = document.querySelector(".tabSelectorBtn ."+tabArray[Math.floor(el.target.scrollLeft / 300)]);
-        newSelected.classList.add("selected");
-      })
-      function selectTab(className) {
-        document.querySelector(".slider ."+className).scrollIntoView({behavior: "smooth"});
-      }
-      function startStopWatch() {
-        timeStart = new Date();
-        interval = setInterval(updateTime,10);
+      var ClockVueApp = new Vue({
+        el: "#container",
+        data: {
+          tabArray: ["Alarm","Clock","StopWatch","Timer"],
 
-        var startBtn = document.querySelector("#startBtn");
-        startBtn.classList.add("hide");
+        },
+        mounted(){
+          this.scrollListner();
+        },
+        methods:{
+          scrollListner(){
+            document.querySelector(".sliderContainer").addEventListener("scroll",(el) =>{
+              var lastSelected = document.querySelector(".selected");
+              lastSelected.classList.remove("selected");
 
-        var runingBtn = document.querySelector("#runingBtn");
-        runingBtn.classList.remove("hide");
-      }
-      function createFlag() {
-        counter += 1;
-        var now = new Date();
-        let gap = now - timeStart;
-        var loggerElement = document.querySelector("#log");
-        var flagString = document.createElement("div");
-        flagString.classList.add("newflagString");
+              var newSelected = document.querySelector(".tabSelectorBtn ."+this.tabArray[Math.floor(el.target.scrollLeft / 300)]);
+              newSelected.classList.add("selected");
+            });
+          },
+          selectTab(className){
+            document.querySelector(".slider ."+className).scrollIntoView({behavior: "smooth"});
+          },
+        },
+        components:{
+          "StopWatch":{
+            data: function(){
+              return{
+                interval: null,
+                timeStart: null,
+                timePause: null,
+                counter: 0,
+                timeLastflag: null,
+                StopWatchString: "00:00.00",
+              }
+            },
+            methods:{
+              startStopWatch() {
+                this.timeStart = new Date();
+                this.interval = setInterval(this.updateTime,10);
 
-        var icoCcontainer = createDiv("" , "ico")
-        var flagIco = document.createElement("i");
-        flagIco.classList.add("fa","fa-flag");
-        icoCcontainer.append(flagIco);
+                var startBtn = document.querySelector("#startBtn");
+                startBtn.classList.add("hide");
 
+                var runingBtn = document.querySelector("#runingBtn");
+                runingBtn.classList.remove("hide");
+              },
+              createFlag() {
+                this.counter += 1;
+                var now = new Date();
+                let gap = now - this.timeStart;
+                var loggerElement = document.querySelector("#log");
+                var flagString = document.createElement("div");
+                flagString.classList.add("newflagString");
 
-        if (loggerElement.children.length == 0) {
-          var StopWatch = document.querySelector(".slider .StopWatch");
-          StopWatch.classList.add("flagWasCreated")
-          StopWatch.classList.remove("flagWasntCreated")
-          difference = gap;
-        } else{
-          difference = now - timeLastflag;
-        }
-        flagString.append(icoCcontainer, createDiv(zeroPad(counter,2), "counter") ,  createDiv("+ " + timeFormat(difference), "difference") , createDiv(timeFormat(gap), "gap"))
-
-        loggerElement.prepend(flagString)
-        setTimeout(() => {
-          flagString.classList.add("flagString");
-          flagString.classList.remove("newflagString");
-        }, 0)
-
-
-        
-
-        timeLastflag = now;
-      }
-      function pauseStopWatch() {
-        clearInterval(interval);
-        var runingBtn = document.querySelector("#runingBtn");
-        runingBtn.classList.add("hide");
+                var icoCcontainer = this.createDiv("" , "ico")
+                var flagIco = document.createElement("i");
+                flagIco.classList.add("fa","fa-flag");
+                icoCcontainer.append(flagIco);
 
 
-        var stopBtn = document.querySelector("#stopBtn");
-        stopBtn.classList.remove("hide");
-        timePause = new Date() - timeStart 
-      }
-      function stopStopWatch() {
-        clearInterval(interval);
-        counter = null;
-        timeLastflag = null;
-        timePause = null;
-        timeStart = null
+                if (loggerElement.children.length == 0) {
+                  var StopWatch = document.querySelector(".slider .StopWatch");
+                  StopWatch.classList.add("flagWasCreated")
+                  StopWatch.classList.remove("flagWasntCreated")
+                  difference = gap;
+                } else{
+                  difference = now - this.timeLastflag;
+                }
+                flagString.append(icoCcontainer, this.createDiv(this.zeroPad(this.counter,2), "counter") ,  this.createDiv("+ " + this.timeFormat(difference), "difference") , this.createDiv(this.timeFormat(gap), "gap"))
 
-        var loggerElement = document.querySelector("#log").children;
-        for (var i = loggerElement.length - 1; i >= 0; i--) {
-          loggerElement[i].remove()
-        }
-
-        var string = document.querySelector("#StopWatchString");
-        string.innerText = '00:00.00'
-
-        var stopBtn = document.querySelector("#stopBtn");
-        stopBtn.classList.add("hide");
-
-        var runingBtn = document.querySelector("#startBtn");
-        runingBtn.classList.remove("hide");
+                loggerElement.prepend(flagString)
+                setTimeout(() => {
+                  flagString.classList.add("flagString");
+                  flagString.classList.remove("newflagString");
+                }, 0)
+                
+                this.timeLastflag = now;
+              },
+              pauseStopWatch() {
+                clearInterval(this.interval);
+                var runingBtn = document.querySelector("#runingBtn");
+                runingBtn.classList.add("hide");
 
 
-        var StopWatch = document.querySelector(".StopWatch");
-        StopWatch.classList.add("flagWasntCreated")
-        StopWatch.classList.remove("flagWasCreated")
-      }
-      function playStopWatch() {
-        timeStart = new Date() - timePause ;
-        interval = setInterval(updateTime,10);
+                var stopBtn = document.querySelector("#stopBtn");
+                stopBtn.classList.remove("hide");
+                this.timePause = new Date() - this.timeStart 
+              },
+              stopStopWatch() {
+                clearInterval(this.interval);
+                this.counter = null;
+                this.timeLastflag = null;
+                this.timePause = null;
+                this.timeStart = null
 
-        var stopBtn = document.querySelector("#stopBtn");
-        stopBtn.classList.add("hide");
+                var loggerElement = document.querySelector("#log").children;
+                for (var i = loggerElement.length - 1; i >= 0; i--) {
+                  loggerElement[i].remove()
+                }
 
-        var runingBtn = document.querySelector("#runingBtn");
-        runingBtn.classList.remove("hide");
-      }
+                this.StopWatchString = '00:00.00';
 
-      function createDiv(text, className) {
-        var div = document.createElement("div");
-        div.innerText = text;
-        div.classList.add(className);
-        return div
-      }
-      function timeFormat(gap) {
-        let minets =  Math.floor(gap / 1000 / 60) % 60;
-        let seconds =  Math.floor(gap / 1000) % 60;
-        let milesecond = Math.floor(gap / 10) % 100;
-        return zeroPad(minets,2) + ":" + zeroPad(seconds,2) + "." + zeroPad(milesecond,2)
-      }
-      function updateTime() {
-        var now = new Date();
-        let gap = now - timeStart;
+                var stopBtn = document.querySelector("#stopBtn");
+                stopBtn.classList.add("hide");
 
-        let minets =  Math.floor(gap / 1000 / 60) % 60;
-        let seconds =  Math.floor(gap / 1000) % 60;
-        let milesecond = Math.floor(gap / 10) % 100;
-
-        var string = document.querySelector("#StopWatchString");
-
-        string.innerText = zeroPad(minets,2) + ":" + zeroPad(seconds,2) + "." + zeroPad(milesecond,2);
-      }
-      function zeroPad(num, places) {
-        return String(num).padStart(places, '0')
-      }
+                var runingBtn = document.querySelector("#startBtn");
+                runingBtn.classList.remove("hide");
 
 
+                var StopWatch = document.querySelector(".slider .StopWatch");
+                StopWatch.classList.add("flagWasntCreated")
+                StopWatch.classList.remove("flagWasCreated")
+              },
+              playStopWatch() {
+                this.timeStart = new Date() - this.timePause ;
+                this.interval = setInterval(this.updateTime,10);
+
+                var stopBtn = document.querySelector("#stopBtn");
+                stopBtn.classList.add("hide");
+
+                var runingBtn = document.querySelector("#runingBtn");
+                runingBtn.classList.remove("hide");
+              },
+              createDiv(text, className) {
+                var div = document.createElement("div");
+                div.innerText = text;
+                div.classList.add(className);
+                return div
+              },
+              timeFormat(gap) {
+                let minets =  Math.floor(gap / 1000 / 60) % 60;
+                let seconds =  Math.floor(gap / 1000) % 60;
+                let milesecond = Math.floor(gap / 10) % 100;
+                return this.zeroPad(minets,2) + ":" + this.zeroPad(seconds,2) + "." + this.zeroPad(milesecond,2)
+              },
+              updateTime() {
+                var now = new Date();
+                let gap = now - this.timeStart;
+
+                let minets =  Math.floor(gap / 1000 / 60) % 60;
+                let seconds =  Math.floor(gap / 1000) % 60;
+                let milesecond = Math.floor(gap / 10) % 100;
+
+                this.StopWatchString = this.zeroPad(minets,2) + ":" + this.zeroPad(seconds,2) + "." + this.zeroPad(milesecond,2);
+              },
+              zeroPad(num, places) {
+                return String(num).padStart(places, '0')
+              }
+            },
+            template:`
+              <div class="StopWatch flagWasntCreated">
+                <div class="time show">
+                  <p id="StopWatchString">{{StopWatchString}}</p>
+                  <p id="curTime">Current time</p>
+                </div>
+                <div id="log">     
+                </div>
+                <div class="btn">
+                  <div id="startBtn">
+                    <div>
+                      <button title="play" @click="startStopWatch()" ><i class="fa fa-play"></i></button>
+                    </div>
+                  </div>
+                  <div id="runingBtn" class="hide">
+                    <div>
+                      <button title="flag"  @click="createFlag()"><i class="fa fa-flag"></i></button>
+                      <button title="pause" @click="pauseStopWatch()"><i class="fa fa-pause"></i></button>
+                    </div>
+                  </div>
+                  <div id="stopBtn" class="hide">
+                    <div>
+                      <button title="stop" @click="stopStopWatch()"><i class="fa fa-stop"></i></button>
+                      <button title="play" @click="playStopWatch()"><i class="fa fa-play"></i></button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            `,
+          }
+        },
+      });
     </script>
   </body>
 </html>
