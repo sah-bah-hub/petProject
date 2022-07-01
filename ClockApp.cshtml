@@ -210,6 +210,47 @@
         height: 45%;
         transition: 0.5s;
       }
+
+
+      .slider .Timer{
+        width: 300px;
+        padding: 0em !important;
+        margin: 0em;
+      }
+      .snap{
+        scroll-snap-type: y mandatory;
+      }
+      .timePicker > div > div{
+        padding: 0.2em 0.3em;
+        scroll-snap-align: center;
+        color: #303030;
+        font-size: 0.9em;
+      }
+      .timePicker > div{
+        overflow-y: scroll;
+        user-select: none;
+        /**/
+      }
+
+
+
+      
+      .timePicker{
+        display: inline-flex;
+        height: 80%;
+        margin: 2em 0em 3em 0em;
+        justify-content: space-evenly;
+        width: 300px;
+      }
+      .selectedTimerTime{
+        color: white !important;
+        font-size: 1.1em !important;
+      }
+
+      .timePicker > div::-webkit-scrollbar {
+        display: none;
+      }
+
     </style>
   </head>
   <body class="backgraund">
@@ -241,11 +282,12 @@
             </div>
           </div>
           <div is="StopWatch"></div>
-          <div class="Timer">
+          <div is="Timer"></div>
+          <!-- <div class="Timer">
             <div>
               content stub Timer <i class="fa fa-hourglass"></i>
             </div>
-          </div>
+          </div> -->
         </div>
       </div>
     </div>
@@ -424,6 +466,158 @@
                     <div>
                       <button title="stop" @click="stopStopWatch()"><i class="fa fa-stop"></i></button>
                       <button title="play" @click="playStopWatch()"><i class="fa fa-play"></i></button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            `,
+          },
+          "Timer":{
+            data: function(){
+              return{
+                infoArray: [[".hours","hour",23],[".minutes","minut",59],[".seconds","second",59]],
+              }
+            },
+            mounted(){
+              this.createTime();
+              this.createTime();
+              document.querySelector(".hours").scrollTop = document.querySelector(".hours").scrollHeight * 0.45;
+              document.querySelector(".minutes").scrollTop = document.querySelector(".minutes").scrollHeight * 0.48;
+              document.querySelector(".seconds").scrollTop = document.querySelector(".seconds").scrollHeight * 0.48;
+              this.addScrollSnap();
+              this.scrollLoop();
+              this.dragScroller();
+            },
+            methods:{
+              dragScroller(){
+                this.infoArray.forEach( el => {
+                    const scollElement = document.querySelector(el[0]);
+                    
+                    let isDown = false;
+                    let startY;
+                    let scrollTop;
+
+                    scollElement.addEventListener('mousedown', (e) =>{
+                        isDown = true;
+                        startY = e.pageY - scollElement.offsetLeft;
+                        scrollTop = scollElement.scrollTop;
+                    });
+                    
+                    window.addEventListener('mouseup', () =>{
+                        isDown = false;
+                    });
+                    
+                    window.addEventListener('mousemove', (e) =>{
+                        if(!isDown){
+                            return;  
+                        };
+                        e.preventDefault();
+                        let Y = e.pageY - scollElement.offsetLeft;
+                        let walk = Y - startY
+                        scollElement.scrollTop = scrollTop - walk;
+                    });
+                })
+              },
+              scrollLoop(){
+                this.infoArray.forEach(el => {
+                  const list = document.querySelector(el[0]);
+                  list.addEventListener('scroll', function(ev) {
+                    let items = this.querySelectorAll("."+el[1]);
+                    if (parseInt(this.scrollTop) == 0) {
+                      this.scrollTop = items[items.length - 1].clientHeight;
+                      this.prepend(items[items.length - 1]);
+                      this.scrollTop = 1;
+                    } else if (this.scrollTop > this.scrollHeight - this.clientHeight -1) {
+                      this.append(items[0]);
+                    }
+                  });
+                })
+              },
+              addScrollSnap(){
+                this.infoArray.forEach(el => {
+                  let hours = document.querySelector(el[0]);
+                  var timer = null;
+
+                  hours.addEventListener('scroll', () => {
+                    if (hours.classList.length != 1){
+                      hours.classList.remove("snap")
+
+                    }
+                    clearTimeout(timer);
+                      var index = Math.ceil(document.querySelector(el[0]).scrollTop / document.querySelectorAll("."+el[1])[0].offsetHeight) +1;
+
+                      var preSelected =      document.querySelectorAll("."+el[1])[ index - 1 ];
+                      var selected =         document.querySelectorAll("."+el[1])[index];
+                      var postSelected =     document.querySelectorAll("."+el[1])[index + 1];
+                      document.querySelectorAll("."+el[1]).forEach((element) => {
+                        if(element != preSelected){
+                          element.style.color = ''
+                          element.style.fontSize = '0.9em'
+                        }
+                        if(element != selected){
+                          element.classList.remove("selectedTimerTime")
+                          
+                        }
+                        if(element != postSelected){
+                          element.style.color = ''
+                          element.style.fontSize = '0.9em'
+                          
+                        }
+                      })
+                      preSelected.style.color = 'gray';
+                      preSelected.style.fontSize = '1.1em';
+
+                      postSelected.style.color = 'gray';
+                      postSelected.style.fontSize = '1.1em';
+
+
+
+                      selected.classList.add("selectedTimerTime")
+
+                    timer = setTimeout(function() {
+
+                      hours.classList.add("snap")
+                      
+                    }, 250);
+                  })
+                })
+
+              },
+              createTime(){
+                this.infoArray.forEach(el => {
+                  var container = document.querySelector(".timePicker " + el[0]);
+                  for (var i = el[2]; i >= 0; i--) {
+                    let element = document.createElement("div");
+                    element.innerText = this.zeroPad(i,2);
+                    element.classList.add(el[1]);
+                    container.append(element);
+                  }
+                })
+              },
+              startTimer(){
+                  var selected = document.querySelectorAll(".timePicker .selectedTimerTime");
+                  console.log(selected)
+                  selected.forEach(el => {
+                    console.log(parseInt(el.innerText) )
+                  })
+
+              },
+              zeroPad(num, places) {
+                return String(num).padStart(places, '0')
+              }
+            },
+            template:`
+              <div class="Timer">
+                <div class="timePicker">
+                  <div class="hours"></div>
+                  <div class="minutes"></div>
+                  <div class="seconds"></div>
+
+                </div>
+                <div class="btn">
+                  <div id="startBtn">
+                    <div>
+                      <button title="play" @click="startTimer"><i class="fa fa-play"></i></button>
                     </div>
                   </div>
                 </div>
