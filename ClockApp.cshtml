@@ -49,7 +49,7 @@
         transition: all 0.3s ease 0s;
         display: inline-flex;
       }
-      .slider > div:not(.tabSelectorBtn,.StopWatch,.Timer){
+      .slider > div:not(.tabSelectorBtn,.StopWatch,.Timer,.Clock){
         height: 80%;
         font-size: 2.1em;
         text-align: center;
@@ -80,12 +80,19 @@
       .tabSelectorBtn button{
         padding: 1em;
         /* margin: 1em; */
-        background-color: black;
+        background-color: rgba(0 0 0 / 0.3);
         color: gray;
         font-size: larger;
         transition: 0.1s;
         border-radius: 50%;
         border: none;
+        cursor: pointer;
+      }
+      .tabSelectorBtn button:hover{
+        background-color: rgba(50 50 50 / 0.5);
+      }
+      .tabSelectorBtn button:active{
+        background-color: rgba(50 50 50 / 0.4);
       }
       .selected{
         color: #2460a8 !important;
@@ -232,7 +239,12 @@
         height: 60%;
         width: 25%;
       }
-
+      .timePicker > div:not(.line){
+        cursor: grab;
+      }
+      .timePicker > div:not(.line):active{
+        cursor: grabbing;
+      }
       
       .timePicker{
         display: inline-flex;
@@ -299,22 +311,87 @@
           border-radius: 50%;
           border-color: rgba(50 50 50 / 0.1);
       }
+      .TimerEnd{
+        width: inherit;
+        height: 100%;
+      }
+      .TimerEnd .DateContainer{
+        margin: auto;
+        padding: 0em;
+        font-size: 1.5em;
+        width: max-content;
+      }
+      .TimerEnd .date{
+        font-size: 0.3em;
+        text-align: center;
+      }
+      .TimerEnd .ico{
+        font-size: 1.3em;
+        margin: auto;
+        width: fit-content;
+        padding: 1.5em;
+        color: gray;
+      }
+      .TimerEnd .timerInfo{
+        margin: auto;
+        width: fit-content;
+        font-size: 0.4em;
+        text-align: center;
+        padding: 3em;
+      }
+      .TimerEnd .btnContainer{
+        margin: auto;
+        width: fit-content;
+        padding: 1em;
+      }
+      .TimerEnd .btnContainer button{
+        padding: 0.5em 5em;
+        margin: auto;
+        background-color: rgba(50 50 50 / 0.3);
+        color: white;
+        border: gray;
+        border-radius: 1em;
+        cursor: pointer;
+      }
+      .TimerEnd .btnContainer button:hover {
+        background-color: rgba(50 50 50 / 0.5);
+      }
+      .TimerEnd .btnContainer button:active {
+        background-color: rgba(50 50 50 / 0.4);
+      }
+
+      .slider .Clock{
+        width: 300px;
+        scroll-snap-align: center;
+      }
+      .Clock > div{
+        width: inherit;
+        text-align: center;
+        padding: 3em 0em;
+      }
+      .Clock .time{
+        font-size: 3em;
+      }
+      .Clock .date{
+        color: gray; 
+      }
+
     </style>
   </head>
   <body class="backgraund">
     <div id="container">
       <div class="tabSelectorBtn">
-        <button class="Alarm selected">
-          <i @click="selectTab('Alarm')" class="fa fa-bell"></i>
+        <button @click="selectTab('Alarm')" class="Alarm selected">
+          <i class="fa fa-bell"></i>
         </button>
-        <button class="Clock">
-          <i @click="selectTab('Clock')" class="fa fa-clock"></i>
+        <button @click="selectTab('Clock')" class="Clock">
+          <i class="fa fa-clock"></i>
         </button>
-        <button class="StopWatch">
-          <i @click="selectTab('StopWatch')" class="fa fa-stopwatch"></i>
+        <button @click="selectTab('StopWatch')" class="StopWatch">
+          <i class="fa fa-stopwatch"></i>
         </button>
-        <button class="Timer">
-          <i @click="selectTab('Timer')" class="fa fa-hourglass"></i>
+        <button @click="selectTab('Timer')" class="Timer">
+          <i class="fa fa-hourglass"></i>
         </button>
       </div>
       <div class="sliderContainer">
@@ -324,11 +401,12 @@
               content stub alarm <i class="fa fa-bell"></i>
             </div>
           </div>
-          <div class="Clock">
+          <!-- <div class="Clock">
             <div>
               content stub Clock <i class="fa fa-clock"></i>
             </div>
-          </div>
+          </div> -->
+          <div is="Clock"></div>
           <div is="StopWatch"></div>
           <div is="Timer"></div>
           <!-- <div class="Timer">
@@ -364,6 +442,36 @@
           },
         },
         components:{
+          "Clock":{
+            data: function(){
+              return{
+                curTime: "",
+                curDate: ""
+              }
+            },
+            methods:{
+              update(){
+                var now = new Date();
+                this.curTime = this.zeroPad(now.getHours(),2) + ":" + this.zeroPad(now.getMinutes(),2) + ":" + this.zeroPad(now.getSeconds(),2);
+                this.curDate = this.zeroPad(now.getDate(),2) + "." + this.zeroPad(now.getMonth(),2)  + "." + now.getFullYear();;
+
+              },
+              zeroPad(num, places) {
+                return String(num).padStart(places, '0')
+              },
+            },
+            mounted(){
+              setInterval(this.update,100);
+            },
+            template:`
+              <div class="Clock">
+                <div>
+                  <p class="time">{{curTime}}</p>
+                  <p class="date">{{curDate}}</p>
+                </div>
+              </div>
+            `
+          },
           "StopWatch":{
             data: function(){
               return{
@@ -524,6 +632,8 @@
               return{
                 infoArray: [[".hours","hour",23],[".minutes","minut",59],[".seconds","second",59]],
                 TimerString: "00:00:00",
+                TimeNow: "00:00:00",
+                DateNow: "",
                 currentTime: "",
                 timeStart: null,
                 timeEnd: null,
@@ -604,17 +714,15 @@
                     function init() {
                       particle = new Particle( scollElement );
                       scollElement.addEventListener( 'mousedown', onMousedown, false );
-                      //
                     }
 
                     var dragForce = 0;
 
                     function animate() {
-                      console.log(particle.positionY)
                       particle.update();
                       particle.render();
                       var AnimationFrame = requestAnimationFrame( animate );
-                      if (!particle.isDragging && particle.positionY != 0 && particle.lastPosition == particle.positionY.toFixed(1)) {
+                      if (isDragging && !particle.isDragging && particle.positionY != 0 && particle.lastPosition == particle.positionY.toFixed(1)) {
                         cancelAnimationFrame( AnimationFrame );                      
                         isDragging = false 
                       } 
@@ -661,17 +769,14 @@
                   const list = document.querySelector(el[0]);
                   list.addEventListener("scroll" , e => {
                       if(list.scrollTop < 10){
-                          list.scrollTop += list.scrollHeight  - 300
-                          console.log(list.scrollTop)
+                          list.scrollTop += list.scrollHeight  - 300;
                       }
                       if(list.scrollTop > list.scrollHeight - 300){
-                          list.scrollTop -= list.scrollHeight -1 
-                          
+                          list.scrollTop -= list.scrollHeight -1 ;                          
                       }
                       
                   })
                 })
-
               },
               addScrollSnap(){
                 this.infoArray.forEach(el => {
@@ -767,7 +872,6 @@
                 
                 var progress = document.querySelector(".Timer .progress");
                 progress.classList.add("stopTimer");
-
               },
               stopTimer(){
                 clearInterval(this.interval);
@@ -808,14 +912,16 @@
                 let hours =  Math.floor(gap / 1000 / 60 / 60) % 60;
                 let minets =  Math.floor(gap / 1000 / 60) % 60;
                 let seconds =  Math.floor(gap / 1000) % 60;
-                let milesecond = Math.floor(gap)
+                let milesecond = Math.floor(gap);
 
                 this.TimerString = this.zeroPad(hours,2) + ":" + this.zeroPad(minets,2) + ":" + this.zeroPad(seconds,2);
 
                 if (gap < 0 ) {
-                  this.stopTimer()
+                  this.TimerIsOver();
                 }
-                this.updateProgressBar((gap / this.totalTime * 100) * -1 + 100)
+                this.updateProgressBar((gap / this.totalTime * 100) * -1 + 100);
+
+                this.TimeNow = this.zeroPad(now.getHours(),2) + ":" + this.zeroPad(now.getMinutes(),2);
               },
               updateProgressBar(procent){
                 var el =  document.querySelector(".Timer .progress");
@@ -826,6 +932,30 @@
               },
               zeroPad(num, places) {
                 return String(num).padStart(places, '0')
+              },
+              TimerIsOver(){
+                var now = new Date();
+                this.DateNow = now.toLocaleString('default', { day: 'numeric'  }) + " " + now.toLocaleString('default', { month: 'long', weekday: 'long' })
+                var TimerEnd = document.querySelector(".Timer .TimerEnd");
+                TimerEnd.classList.remove("hide");
+
+                var timerView = document.querySelector(".Timer .timerView");
+                timerView.classList.add("hide");
+
+
+                var stopBtn = document.querySelector(".Timer .btn #stopBtn");
+                stopBtn.classList.add("hide");
+
+                var runingBtn = document.querySelector(".Timer .btn #startBtn");
+                runingBtn.classList.remove("hide");
+              },
+              clouseTimer(){
+                clearInterval(this.interval);
+                var timePicker = document.querySelector(".Timer .timePicker");
+                timePicker.classList.remove("hide");
+
+                var TimerEnd = document.querySelector(".Timer .TimerEnd");
+                TimerEnd.classList.add("hide");
               }
             },
             template:`
@@ -845,6 +975,22 @@
                   </svg>
                   <p class="TimerString">{{TimerString}}</p>
                   <p class="currentTime">{{currentTime}}</p>
+                </div>
+                <div class="TimerEnd hide">
+                  <div class="DateContainer">
+                    <p>{{TimeNow}}</p>
+                    <p class="date">{{DateNow}}</p>
+                  </div>
+                  <div class="ico">
+                    <i class="fa fa-bell"></i>
+                  </div>
+                  <div class="timerInfo">
+                    <p>time is over!</p>
+                    <p>{{currentTime}}</p>
+                  </div>
+                  <div class="btnContainer">
+                    <button @click="clouseTimer">ok</button>
+                  </div>
                 </div>
                 <div class="btn">
                   <div id="startBtn">
