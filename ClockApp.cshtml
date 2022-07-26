@@ -49,11 +49,8 @@
         transition: all 0.3s ease 0s;
         display: inline-flex;
       }
-      .slider > div:not(.tabSelectorBtn,.StopWatch,.Timer,.Clock){
-        height: 80%;
-        font-size: 2.1em;
-        text-align: center;
-        padding: 3em;
+      .slider > div{
+        width: 300px;
         scroll-snap-align: center;
       }
       #container{
@@ -174,11 +171,6 @@
       .flagString .gap{
         float: right;
       }
-      .slider .StopWatch{
-        width: 300px;
-
-        scroll-snap-align: center;
-      }
 
       /*styles after creating first flag*/
       .flagWasCreated #StopWatchString{
@@ -219,11 +211,6 @@
       }
 
 
-      .slider .Timer{
-        width: 300px;
-        padding: 0em !important;
-        margin: 0em;
-      }
       .snap{
         scroll-snap-type: y mandatory;
       }
@@ -294,7 +281,6 @@
       }
       .stopTimer{
         stroke: darkgray;
-
       }
       .regress{
         stroke: gray;
@@ -306,10 +292,10 @@
         margin: 0.5em 0em;
       }
       .line {
-          width: 0em !important;
-          border: solid 0.01em;
-          border-radius: 50%;
-          border-color: rgba(50 50 50 / 0.1);
+        width: 0em !important;
+        border: solid 0.01em;
+        border-radius: 50%;
+        border-color: rgba(50 50 50 / 0.1);
       }
       .TimerEnd{
         width: inherit;
@@ -360,10 +346,6 @@
         background-color: rgba(50 50 50 / 0.4);
       }
 
-      .slider .Clock{
-        width: 300px;
-        scroll-snap-align: center;
-      }
       .Clock > div{
         width: inherit;
         text-align: center;
@@ -375,6 +357,160 @@
       .Clock .date{
         color: gray; 
       }
+
+      .Alarm .btn{
+        margin: auto; 
+        width: fit-content;
+        padding: 1em;
+        margin-top: -1.5em;
+      }
+      .alarmContainer {
+        height: 85%;
+        width: -webkit-fill-available;
+        overflow: auto;
+      }
+      .alarmContainer::-webkit-scrollbar {
+        display: none;
+      }
+      .popupSadow{
+        height: -webkit-fill-available;
+        width: -webkit-fill-available;
+        position: fixed;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 2;
+        background-color: rgba(0,0,0,0.3);
+        display: flex;
+        backdrop-filter: blur(0.2em);
+      }
+      .popup {
+        width: 90%;
+        height: 55%;
+        margin: auto;
+        border-radius: 0.5em;
+        background-color: black;
+      }
+      .AlarmTimePicker{
+        width: 100%;
+        justify-content: space-evenly;
+        display: inline-flex;
+        font-size: 2em;
+        height: 78%;
+        margin: 0.5em 0em -0.5em 0em;
+        text-align: center;
+      }
+      button.cancel {
+          color: #6e1212;
+      }
+      button.save {
+          color: #124503;
+      }
+      .AlarmTimePicker > div > div{
+        padding: 0.2em 0.3em;
+        scroll-snap-align: center;
+        color: #303030;
+        font-size: 0.8em;
+      }
+      .AlarmTimePicker > div{
+        overflow-y: scroll;
+        user-select: none;
+        width: 25%;
+      }
+      .AlarmTimePicker > div:not(.line){
+        cursor: grab;
+      }
+      .AlarmTimePicker > div:not(.line):active{
+        cursor: grabbing;
+      }
+      
+      .popup .btn{
+        padding: 1.5em;
+      }
+      .AlarmTimePicker > div::-webkit-scrollbar {
+        display: none;
+      }
+
+      .switch {
+        position: relative;
+        display: inline-grid;
+        width: 45px;
+        height: 25px;
+      }
+      .switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+      }
+      .toggleSlider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #ccc;
+        -webkit-transition: .4s;
+        transition: .4s;
+      }
+      .toggleSlider:before {
+        position: absolute;
+        content: "";
+        height: 19px;
+        width: 19px;
+        left: 3px;
+        bottom: 3px;
+        background-color: white;
+        -webkit-transition: .4s;
+        transition: .4s;
+      }
+      input:checked + .toggleSlider {
+        background-color: #2196F3;
+      }
+      input:focus + .toggleSlider {
+        box-shadow: 0 0 1px #2196F3;
+      }
+      input:checked + .toggleSlider:before {
+        -webkit-transform: translateX(20px);
+        -ms-transform: translateX(20px);
+        transform: translateX(20px);
+      }
+      .toggleSlider.round {
+        border-radius: 34px;
+      }
+      .toggleSlider.round:before {
+        border-radius: 50%;
+      }
+      .AlarmElement{
+        display: inline-flex;
+        width: -webkit-fill-available;
+        padding: 1em;
+        justify-content: space-between;
+        cursor: pointer;
+      }
+      .AlarmElement:hover{
+        background-color: rgba(50 50 50 / 0.1);
+      }
+      .AlarmElement:active{
+        background-color: rgba(50 50 50 / 0.2);
+      }
+      .AlarmElement .time{
+        font-size: 2em;
+        transition: 0.5s;
+      }
+      .idle{
+        color: gray;
+      }
+      .AlarmElement .timeLeft{
+        color: gray;
+        font-size: 0.8em;
+      }
+      .Alarm .TimerEnd{
+        font-size: 2em;
+
+      }
+
+
 
     </style>
   </head>
@@ -396,29 +532,14 @@
       </div>
       <div class="sliderContainer">
         <div class="slider">
-          <div class="Alarm">
-            <div>
-              content stub alarm <i class="fa fa-bell"></i>
-            </div>
-          </div>
-          <!-- <div class="Clock">
-            <div>
-              content stub Clock <i class="fa fa-clock"></i>
-            </div>
-          </div> -->
+          <div is="Alarm"></div>
           <div is="Clock"></div>
           <div is="StopWatch"></div>
           <div is="Timer"></div>
-          <!-- <div class="Timer">
-            <div>
-              content stub Timer <i class="fa fa-hourglass"></i>
-            </div>
-          </div> -->
         </div>
       </div>
     </div>
-    <script type="text/javascript">  
-
+    <script type="text/javascript">
       var ClockVueApp = new Vue({
         el: "#container",
         data: {
@@ -442,6 +563,417 @@
           },
         },
         components:{
+          "Alarm":{
+            data: function(){
+              return{
+                popupShow: false,
+                alarmWork: false,
+                AlarmArray: [],
+                editAlarm: null,
+                TimeNow: "",
+                DateNow: "",
+                currentTime: "",
+              }
+            },
+            methods:{
+              openPopup(object){
+                this.popupShow = true;
+                let particleArray = this.$children.find(x => x.$vnode.componentOptions.tag = "Popup").particleArray;
+                if (object != null){
+                  this.editAlarm = object;
+                  Vue.nextTick(() => {
+                    let position = document.querySelector(".AlarmTimePicker .hours  ").children[0].offsetHeight * ((object.Time.getHours() < 12 ? object.Time.getHours() + 24 : object.Time.getHours()) -1);
+                    document.querySelector(".AlarmTimePicker .hours  ").scrollTop = position;
+                    particleArray[0].positionY = position *-1;
+                    particleArray[0].dragPositionY = position *-1;
+                    Vue.nextTick(() => {
+                      position = document.querySelector(".AlarmTimePicker .minutes").children[0].offsetHeight * ((object.Time.getMinutes() < 30 ? object.Time.getMinutes() + 60 : object.Time.getMinutes()) -1);
+                      document.querySelector(".AlarmTimePicker .minutes").scrollTop = position;
+                      particleArray[1].positionY = position *-1;
+                      particleArray[1].dragPositionY = position *-1;
+                    });
+                  });
+                  return
+                }
+                var now = new Date();
+                Vue.nextTick(() => {
+                  let position = document.querySelector(".AlarmTimePicker .hours  ").children[0].offsetHeight * ((now.getHours() < 12 ? now.getHours() + 24 : now.getHours()) -1);
+                  document.querySelector(".AlarmTimePicker .hours  ").scrollTop = position;
+                  particleArray[0].positionY = position *-1;
+                  particleArray[0].dragPositionY = position *-1;
+                  Vue.nextTick(() => {
+                    position = document.querySelector(".AlarmTimePicker .minutes").children[0].offsetHeight * ((now.getMinutes() < 30 ? now.getMinutes() + 60 : now.getMinutes()) -1);
+                    document.querySelector(".AlarmTimePicker .minutes").scrollTop = position;
+                    particleArray[1].positionY = position *-1;
+                    particleArray[1].dragPositionY = position *-1;
+                  });
+                });
+              },
+              createAlarm(){
+                var selected = document.querySelectorAll(".AlarmTimePicker .selectedTimerTime");
+                var now = new Date();
+                now.setHours(selected[0].innerText)
+                now.setMinutes(selected[1].innerText)
+                now.setSeconds(0)
+                let timeString = now.getHours() +":"+ this.zeroPad(now.getMinutes(),2);
+                if (this.AlarmArray.find(x => x.timeString == timeString) != null){
+                  this.closePopup();
+                  return
+                }
+                if (this.editAlarm != null) {
+                  this.editAlarm.Time = now;
+                  this.editAlarm.timeString = timeString;
+                  this.editAlarm.active = true;
+                  this.editAlarm.difference = "";
+                  this.closePopup();
+                  return
+                }
+                this.AlarmArray.push({
+                  Time: now,
+                  timeString: timeString,
+                  active: true,
+                  difference: ""
+                })
+                this.closePopup();
+              },
+              closePopup(){
+                this.editAlarm = null;
+                this.popupShow = false;
+              },
+              deleteAlarm(){
+                this.AlarmArray.splice(this.AlarmArray.indexOf(this.editAlarm), 1);
+                this.closePopup()
+              },
+              update(){
+                var now = new Date();
+                this.AlarmArray.forEach(x => {
+                  this.TimeNow = this.zeroPad(now.getHours(),2) + ":" + this.zeroPad(now.getMinutes(),2);
+                  this.DateNow = now.toLocaleString('default', { day: 'numeric'  }) + " " + now.toLocaleString('default', { month: 'long', weekday: 'long' });
+                  this.currentTime = x.timeString;
+                  if (!x.active) {
+                    x.difference = ""
+                    return
+                  }
+                  var obj = x
+                  let time = x.Time
+                  if (Math.floor(time / 1000) == Math.floor(now / 1000)) {
+                    this.alarmWork = true;
+                  }
+                  if(time < now){
+                    time.setDate(time.getDate() + 1)
+                  }
+                  let difference =  now - time;
+                  let timeString = "Alarm in ";
+                  var curArray = [[Math.floor(difference / 1000 / 60 / 60) % 60 *-1-1,"h"],[Math.floor(difference / 1000 / 60) % 60 *-1,"m"]];
+                  curArray.forEach(el => {
+                    if (el[0] != 0) {
+                      timeString += el[0] + " " +el[1]+ " ";
+                    }
+                  })
+                  obj.difference = timeString
+                  Object.assign(obj,x)
+                })
+              },
+              zeroPad(num, places) {
+                return String(num).padStart(places, '0')
+              },
+              clouseAlarm(){
+                this.alarmWork = false;
+              }
+            },
+            mounted(){
+              setInterval(this.update,100);
+              var now = new Date();
+              now.setHours(8)
+              now.setMinutes(0)
+              now.setSeconds(0)
+              this.AlarmArray.push({
+                Time: now,
+                timeString: now.getHours() +":"+ this.zeroPad(now.getMinutes(),2),
+                active: true,
+                difference: ""
+              })
+            },
+            components:{
+              "Popup":{
+                props: ['obj'],
+                data: function(){
+                  return{
+                    infoArray: [[".hours","hour",23],[".minutes","minut",59]],
+                    particleArray: ["0","1"],
+                  }
+                },
+                mounted(){
+                  this.createTime();
+                  this.createTime();
+                  this.dragScroller();
+                  this.scrollLoop();
+                  this.addScrollSnap();
+                },
+                methods:{
+                  dragScroller(){
+                    this.infoArray.forEach( (el,idx) => {
+                        const scollElement = document.querySelector(".AlarmTimePicker " +el[0]);
+
+                        function Particle( elem ) {
+                          this.element = elem;
+                          this.positionY = elem.scrollTop * -1;
+                          this.dragPositionY = elem.scrollTop * -1;
+                          this.velocityY = 0;
+                          this.friction = 0.97;
+                          this.accelY = 0;
+                          this.isDragging = false;
+                          this.lastPosition = 0;
+                        }
+
+                        Particle.prototype.render = function() {
+                          if (this.positionY > 0) { 
+                            this.positionY -= this.element.scrollHeight
+                            this.dragPositionY = this.positionY
+                          }
+                          if (this.positionY * -1 > this.element.scrollHeight) { 
+                            this.positionY += this.element.scrollHeight
+                            this.dragPositionY = this.positionY
+                          }
+                          this.element.scrollTop = (this.positionY * -1).toFixed(1);
+                        };
+
+                        Particle.prototype.update = function() {
+                          this.applyDragForce();
+                          this.integrate();
+                        };
+
+                        Particle.prototype.integrate = function() {
+                          this.velocityY += this.accelY;
+                          this.velocityY *= this.friction;
+                          this.positionY += this.velocityY;
+                          this.accelY = 0;
+                        };
+
+                        Particle.prototype.applyForce = function( force ) {
+                          this.accelY += force;
+                        };
+
+                        Particle.prototype.applyDragForce = function() {
+                          if ( !this.isDragging ) {
+                            return;
+                          }
+                          var dragVelocity = this.dragPositionY - this.positionY;
+                          var dragForce = dragVelocity - this.velocityY;
+                          this.applyForce( dragForce );
+                        };
+
+
+                        var particle;
+
+                        document.addEventListener( 'DOMContentLoaded', init(this), false );
+
+                        function init(it) {
+                          particle = new Particle( scollElement );
+                          it.particleArray[idx] = particle
+                          scollElement.addEventListener( 'mousedown', onMousedown, false );
+                        }
+
+                        var dragForce = 0;
+
+                        function animate() {
+                          particle.update();
+                          particle.render();
+                          var AnimationFrame = requestAnimationFrame( animate );
+                          if (isDragging && !particle.isDragging && particle.positionY != 0 && particle.lastPosition == particle.positionY.toFixed(1)) {
+                            cancelAnimationFrame( AnimationFrame );                      
+                            isDragging = false 
+                          } 
+                          particle.lastPosition = particle.positionY.toFixed(1);
+                        }
+
+                        var dragStartY;
+                        var particleDragStartY;
+                        var isDragging = false;
+
+                        function onMousedown( event ) {
+                          if (!isDragging) {
+                            animate()
+                          }
+                          event.preventDefault();
+                          dragStartY = event.pageY;
+                          particleDragStartY = particle.positionY;
+                          particle.isDragging = true;
+                          isDragging = true;
+                          setDragPositionX( event );
+                          window.addEventListener( 'mousemove', onMousemove, false );
+                          window.addEventListener( 'mouseup', onMouseup, false );
+                        }
+
+                        function onMousemove( event ) {
+                          setDragPositionX( event );
+                        }
+
+                        function setDragPositionX( event ) {
+                          var moveY = event.pageY - dragStartY;
+                          particle.dragPositionY = particleDragStartY + moveY;
+                        }
+
+                        function onMouseup() {
+                          particle.isDragging = false;
+                          window.removeEventListener( 'mousemove', onMousemove, false );
+                          window.removeEventListener( 'mouseup', onMouseup, false );
+                        }
+
+                    })
+                  },
+                  createTime(){
+                    this.infoArray.forEach(el => {
+                      var container = document.querySelector(".AlarmTimePicker " + el[0]);
+                      for (var i = el[2]; i >= 0; i--) {
+                        let element = document.createElement("div");
+                        element.innerText = this.zeroPad(i,2);
+                        element.classList.add(el[1]);
+                        container.prepend(element);
+                      }
+                    })
+                  },
+                  scrollLoop(){
+                    this.infoArray.forEach(el => {
+                      const list = document.querySelector(".AlarmTimePicker " +el[0]);
+                      list.addEventListener("scroll" , e => {
+                          if(list.scrollTop < 10){
+                              list.scrollTop += list.scrollHeight  - 300;
+                          }
+                          if(list.scrollTop > list.scrollHeight - 300){
+                              list.scrollTop -= list.scrollHeight -1 ;                          
+                          }
+                          
+                      })
+                    })
+                  },
+                  addScrollSnap(){
+                    this.infoArray.forEach(el => {
+                      let hours = document.querySelector(".AlarmTimePicker " +el[0]);
+                      var timer = null;
+
+                      hours.addEventListener('scroll', () => {
+                        if (hours.classList.length != 1){
+                          hours.classList.remove("snap")
+
+                        }
+                        clearTimeout(timer);
+                          var index = Math.ceil(document.querySelector(".AlarmTimePicker "+el[0]).scrollTop / document.querySelectorAll(".AlarmTimePicker ."+el[1])[0].offsetHeight) +1;
+
+                          var preSelected  =     document.querySelectorAll(".AlarmTimePicker ."+el[1])[ index - 1 ];
+                          var selected     =     document.querySelectorAll(".AlarmTimePicker ."+el[1])[index];
+                          var postSelected =     document.querySelectorAll(".AlarmTimePicker ."+el[1])[index + 1];
+
+                          document.querySelectorAll(".AlarmTimePicker ."+el[1]).forEach((element) => {
+                            if(element != preSelected && element != postSelected){
+                              element.classList.remove("clouseSelect");
+                            }
+                            if(element != selected){
+                              element.classList.remove("selectedTimerTime")                          
+                            }
+                          })
+                          preSelected.classList.add("clouseSelect");
+                          postSelected.classList.add("clouseSelect");
+                          selected.classList.add("selectedTimerTime")
+
+                          timer = setTimeout(function() {
+
+                            hours.classList.add("snap")
+                            
+                          }, 250);
+                      })
+                    })
+                  },
+                  zeroPad(num, places) {
+                    return String(num).padStart(places, '0')
+                  },
+                },
+                template:`
+                  <div class="popupSadow">
+                    <div class="popup">
+                      <div class="AlarmTimePicker">
+                        <div class="hours"></div>
+                        <div class="line"></div>
+                        <div class="minutes"></div>
+                      </div>
+                      <div class="btn">
+                        <button class="save" title="save" @click="$emit('addAlarm')">
+                          <i class="fa fa-check"></i>
+                        </button>
+                        <button v-if="obj != null" class="delete" title="delete" @click="$emit('delete')">
+                          <i class="fa fa-trash"></i>
+                        </button>
+                        <button class="cancel" title="cancel" @click="$emit('closePopup')">
+                          <i class="fa fa-plus" style="transform: rotate(45deg);"></i>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                `
+              },
+              "AlarmElement":{
+                props: ['obj'],
+                data: function(){
+                  return{
+                  }
+                },
+                mounted(){
+                },
+                methods:{
+                },
+                template:`
+                  <div class="AlarmElement" @click="$emit('edit')">
+                    <div :class="obj.active ? '': 'idle'">
+                      <p class="time">{{obj.timeString}}</p>
+                      <p class="timeLeft">{{obj.difference}}</p>
+                    </div>
+
+                    <div class="switcher">
+                      <label class="switch">
+                        <input type="checkbox" v-model="obj.active">
+                        <span class="toggleSlider round"></span>
+                      </label>
+                    </div>
+                  </div>
+                `
+              }
+            },
+            template:`
+              <div class="Alarm">
+                <div v-show="!alarmWork" style="height:100%">
+                  <div class="alarmContainer">
+                    <div v-for="el,idx in AlarmArray" is="AlarmElement" :obj="el" :key="idx" @edit="openPopup(el)"></div>
+                  </div>
+                  <div class="btn">
+                    <button title="Create" @click="openPopup()">
+                      <i class="fa fa-plus"></i>
+                    </button>
+                  </div>
+                  <div v-show="popupShow">
+                    <div is="Popup" :obj="editAlarm" @closePopup="closePopup()" @addAlarm="createAlarm()" @delete="deleteAlarm()"></div>
+                  </div>
+                </div>
+                <div v-show="alarmWork">
+                  <div class="TimerEnd">
+                    <div class="DateContainer">
+                      <p>{{TimeNow}}</p>
+                      <p class="date">{{DateNow}}</p>
+                    </div>
+                    <div class="ico">
+                      <i class="fa fa-bell"></i>
+                    </div>
+                    <div class="timerInfo">
+                      <p>time is over!</p>
+                      <p>{{currentTime}}</p>
+                    </div>
+                    <div class="btnContainer">
+                      <button @click="clouseAlarm()">ok</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            `
+          },
           "Clock":{
             data: function(){
               return{
@@ -453,7 +985,7 @@
               update(){
                 var now = new Date();
                 this.curTime = this.zeroPad(now.getHours(),2) + ":" + this.zeroPad(now.getMinutes(),2) + ":" + this.zeroPad(now.getSeconds(),2);
-                this.curDate = this.zeroPad(now.getDate(),2) + "." + this.zeroPad(now.getMonth(),2)  + "." + now.getFullYear();;
+                this.curDate = this.zeroPad(now.getDate(),2) + "." + this.zeroPad(now.getMonth(),2)  + "." + now.getFullYear();
 
               },
               zeroPad(num, places) {
@@ -645,9 +1177,9 @@
             mounted(){
               this.createTime();
               this.createTime();
-              document.querySelector(".hours").scrollTop = document.querySelector(".hours").scrollHeight * 0.46;
-              document.querySelector(".minutes").scrollTop = document.querySelector(".minutes").scrollHeight * 0.485;
-              document.querySelector(".seconds").scrollTop = document.querySelector(".seconds").scrollHeight * 0.485;
+              document.querySelector(".timePicker .hours").scrollTop = document.querySelector(".timePicker .hours").scrollHeight * 0.46;
+              document.querySelector(".timePicker .minutes").scrollTop = document.querySelector(".timePicker .minutes").scrollHeight * 0.485;
+              document.querySelector(".timePicker .seconds").scrollTop = document.querySelector(".timePicker .seconds").scrollHeight * 0.485;
               this.addScrollSnap();
               this.scrollLoop();
               this.dragScroller();
@@ -655,8 +1187,7 @@
             methods:{
               dragScroller(){
                 this.infoArray.forEach( el => {
-                    const scollElement = document.querySelector(el[0]);
-
+                    const scollElement = document.querySelector(".timePicker " +el[0]);
 
                     function Particle( elem ) {
                       this.element = elem;
@@ -766,7 +1297,7 @@
               },
               scrollLoop(){
                 this.infoArray.forEach(el => {
-                  const list = document.querySelector(el[0]);
+                  const list = document.querySelector(".timePicker " +el[0]);
                   list.addEventListener("scroll" , e => {
                       if(list.scrollTop < 10){
                           list.scrollTop += list.scrollHeight  - 300;
@@ -780,7 +1311,7 @@
               },
               addScrollSnap(){
                 this.infoArray.forEach(el => {
-                  let hours = document.querySelector(el[0]);
+                  let hours = document.querySelector(".timePicker " +el[0]);
                   var timer = null;
 
                   hours.addEventListener('scroll', () => {
@@ -789,13 +1320,13 @@
 
                     }
                     clearTimeout(timer);
-                      var index = Math.ceil(document.querySelector(el[0]).scrollTop / document.querySelectorAll("."+el[1])[0].offsetHeight) +1;
+                      var index = Math.ceil(document.querySelector(".timePicker "+el[0]).scrollTop / document.querySelectorAll(".timePicker ."+el[1])[0].offsetHeight) +1;
 
-                      var preSelected  =     document.querySelectorAll("."+el[1])[ index - 1 ];
-                      var selected     =     document.querySelectorAll("."+el[1])[index];
-                      var postSelected =     document.querySelectorAll("."+el[1])[index + 1];
+                      var preSelected  =     document.querySelectorAll(".timePicker ."+el[1])[ index - 1 ];
+                      var selected     =     document.querySelectorAll(".timePicker ."+el[1])[index];
+                      var postSelected =     document.querySelectorAll(".timePicker ."+el[1])[index + 1];
 
-                      document.querySelectorAll("."+el[1]).forEach((element) => {
+                      document.querySelectorAll(".timePicker ."+el[1]).forEach((element) => {
                         if(element != preSelected && element != postSelected){
                           element.classList.remove("clouseSelect");
                         }
