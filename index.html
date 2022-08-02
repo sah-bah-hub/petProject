@@ -1032,7 +1032,7 @@
 
                       hours.addEventListener('scroll', () => {
 
-                        if (hours.scrollTop - startscroll > document.querySelector(".timePicker ." +el[1]).offsetHeight) {
+                        if (Math.abs(hours.scrollTop - startscroll) > document.querySelector(".timePicker ." +el[1]).offsetHeight) {
                           startscroll = hours.scrollTop;
                           ClockVueApp.snapAudio.currentTime = 0;
                           ClockVueApp.snapAudio.play();
@@ -1375,7 +1375,7 @@
                   var timer = null;
 
                   hours.addEventListener('scroll', () => {
-                    if (hours.scrollTop - startscroll > document.querySelector(".timePicker ." +el[1]).offsetHeight) {
+                    if (Math.abs(hours.scrollTop - startscroll) > document.querySelector(".timePicker ." +el[1]).offsetHeight) {
                       startscroll = hours.scrollTop;
                       ClockVueApp.snapAudio.currentTime = 0;
                       ClockVueApp.snapAudio.play()
