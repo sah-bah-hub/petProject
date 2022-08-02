@@ -517,9 +517,21 @@
       .canHorizontalDraging:active{
         cursor: grabbing !important;
       }
+      .gitBtn{
+        float: right;
+        margin: 5px;
+      }
+      .gitBtn img{
+        width: 50px;
+      }
     </style>
   </head>
   <body class="backgraund">
+    <button class="gitBtn">
+      <a href="https://github.com/sah-bah-hub/sah-bah-hub.github.io/blob/main/index.html">
+        <img src="https://cdn-icons-png.flaticon.com/512/25/25231.png">
+      </a>
+    </button>
     <div id="container">
       <div class="tabSelectorBtn">
         <button @click="selectTab('Alarm',0)" class="Alarm selected">
@@ -550,11 +562,30 @@
         data: {
           tabArray: ["Alarm","Clock","StopWatch","Timer"],
           particleArray: [],
+          alarmWork: false,
           lastEvent: null,
+          alarmAudio: null,
+          snapAudio: null,
+        },
+        watch: {
+          alarmWork(cur, old) {
+            if (cur != false) {
+              var number = cur == "Alarm" ? 0 : 3;
+              this.selectTab(cur,number)
+            }
+          }
         },
         mounted(){
           this.scrollListner();
           this.careateTachnes();
+
+          var alarmAudio = new Audio();
+          alarmAudio.src = 'https://cdn.discordapp.com/attachments/676017166293663757/1004095625694027916/alarm-clock-small-beeps_f1euwnnu.mp3';
+          this.alarmAudio = alarmAudio;
+
+          var snapAudio = new Audio();
+          snapAudio.src = 'https://cdn.discordapp.com/attachments/676017166293663757/1004106315615981749/faffc4680144f12.mp3';
+          this.snapAudio = snapAudio;
         },
         methods:{
           careateTachnes(){
@@ -630,6 +661,10 @@
             var dragForce = 0;
 
             function animate() {
+              if (it.alarmWork != false) {
+                cancelAnimationFrame( AnimationFrame );
+                return
+              }
               if (scollElement.classList.item("hSnap")) {scollElement.classList.remove("hSnap")};
               particle.update();
               particle.render();
@@ -921,13 +956,17 @@
                   let time = x.Time
                   if (Math.floor(time / 1000) == Math.floor(now / 1000)) {
                     this.alarmWork = true;
+                    ClockVueApp.alarmWork = "Alarm";
+                    ClockVueApp.alarmAudio.currentTime = 0;
+                    ClockVueApp.alarmAudio.play();
+
                   }
                   if(time < now){
                     time.setDate(time.getDate() + 1)
                   }
                   let difference =  now - time;
                   let timeString = "Alarm in ";
-                  var curArray = [[Math.floor(difference / 1000 / 60 / 60) % 60 *-1-1,"h"],[Math.floor(difference / 1000 / 60) % 60 *-1,"m"]];
+                  var curArray = [[Math.floor(difference / 1000 / 60 / 60) % 60 *-1-1,"h"],[Math.floor(difference / 1000 / 60) % 60 *-1-1,"m"],[Math.floor(difference / 1000) % 60 *-1,"s"]];
                   curArray.forEach(el => {
                     if (el[0] != 0) {
                       timeString += el[0] + " " +el[1]+ " ";
@@ -942,6 +981,8 @@
               },
               clouseAlarm(){
                 this.alarmWork = false;
+                ClockVueApp.alarmWork = false;
+                ClockVueApp.alarmAudio.pause();
               }
             },
             mounted(){
@@ -981,12 +1022,21 @@
                         container.prepend(element);
                       }
                     })
-                  },                  addScrollSnap(){
+                  },
+                  addScrollSnap(){
                     this.infoArray.forEach(el => {
                       let hours = document.querySelector(".AlarmTimePicker " +el[0]);
+                      var scrollTop = 0;
+                      var startscroll = hours.scrollTop;
                       var timer = null;
 
                       hours.addEventListener('scroll', () => {
+
+                        if (hours.scrollTop - startscroll > document.querySelector(".timePicker ." +el[1]).offsetHeight) {
+                          startscroll = hours.scrollTop;
+                          ClockVueApp.snapAudio.currentTime = 0;
+                          ClockVueApp.snapAudio.play();
+                        }
                         if (hours.classList.length != 1){
                           hours.classList.remove("snap")
 
@@ -1320,17 +1370,24 @@
               addScrollSnap(){
                 this.infoArray.forEach(el => {
                   let hours = document.querySelector(".timePicker " +el[0]);
+                  var scrollTop = 0;
+                  var startscroll = hours.scrollTop;
                   var timer = null;
 
                   hours.addEventListener('scroll', () => {
+                    if (hours.scrollTop - startscroll > document.querySelector(".timePicker ." +el[1]).offsetHeight) {
+                      startscroll = hours.scrollTop;
+                      ClockVueApp.snapAudio.currentTime = 0;
+                      ClockVueApp.snapAudio.play()
+
+                    }
                     if (hours.classList.length != 1){
                       hours.classList.remove("snap")
-
                     }
                     clearTimeout(timer);
                       var index = Math.ceil(document.querySelector(".timePicker "+el[0]).scrollTop / document.querySelectorAll(".timePicker ."+el[1])[0].offsetHeight) +1;
 
-                      var preSelected  =     document.querySelectorAll(".timePicker ."+el[1])[ index - 1 ];
+                      var preSelected  =     document.querySelectorAll(".timePicker ."+el[1])[index - 1 ];
                       var selected     =     document.querySelectorAll(".timePicker ."+el[1])[index];
                       var postSelected =     document.querySelectorAll(".timePicker ."+el[1])[index + 1];
 
@@ -1349,6 +1406,7 @@
                     timer = setTimeout(function() {
 
                       hours.classList.add("snap")
+                      startscroll = hours.scrollTop
                       
                     }, 250);
                   })
@@ -1460,6 +1518,7 @@
                 this.TimerString = this.zeroPad(hours,2) + ":" + this.zeroPad(minets,2) + ":" + this.zeroPad(seconds,2);
 
                 if (gap < 0 ) {
+                  clearInterval(this.interval);
                   this.TimerIsOver();
                 }
                 this.updateProgressBar((gap / this.totalTime * 100) * -1 + 100);
@@ -1477,6 +1536,9 @@
                 return String(num).padStart(places, '0')
               },
               TimerIsOver(){
+                ClockVueApp.alarmAudio.currentTime = 0;
+                ClockVueApp.alarmAudio.play();
+                ClockVueApp.alarmWork = "Timer";
                 var now = new Date();
                 this.DateNow = now.toLocaleString('default', { day: 'numeric'  }) + " " + now.toLocaleString('default', { month: 'long', weekday: 'long' })
                 var TimerEnd = document.querySelector(".Timer .TimerEnd");
@@ -1493,6 +1555,8 @@
                 runingBtn.classList.remove("hide");
               },
               clouseTimer(){
+                ClockVueApp.alarmAudio.pause();
+                ClockVueApp.alarmWork = false;
                 clearInterval(this.interval);
                 var timePicker = document.querySelector(".Timer .timePicker");
                 timePicker.classList.remove("hide");
