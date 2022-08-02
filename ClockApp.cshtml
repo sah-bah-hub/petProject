@@ -35,7 +35,6 @@
       }
       .sliderContainer{
         height: 90%;
-        scroll-snap-type: x mandatory;
         overflow-x: scroll;
         overflow-y: hidden;
       }
@@ -213,6 +212,9 @@
 
       .snap{
         scroll-snap-type: y mandatory;
+      }
+      .hSnap{
+        scroll-snap-type: x mandatory;
       }
       .timePicker > div > div{
         padding: 0.2em 0.3em;
@@ -509,28 +511,31 @@
         font-size: 2em;
 
       }
-
-
-
+      .canHorizontalDraging{
+        cursor: grab;
+      }
+      .canHorizontalDraging:active{
+        cursor: grabbing !important;
+      }
     </style>
   </head>
   <body class="backgraund">
     <div id="container">
       <div class="tabSelectorBtn">
-        <button @click="selectTab('Alarm')" class="Alarm selected">
+        <button @click="selectTab('Alarm',0)" class="Alarm selected">
           <i class="fa fa-bell"></i>
         </button>
-        <button @click="selectTab('Clock')" class="Clock">
+        <button @click="selectTab('Clock',1)" class="Clock">
           <i class="fa fa-clock"></i>
         </button>
-        <button @click="selectTab('StopWatch')" class="StopWatch">
+        <button @click="selectTab('StopWatch',2)" class="StopWatch">
           <i class="fa fa-stopwatch"></i>
         </button>
-        <button @click="selectTab('Timer')" class="Timer">
+        <button @click="selectTab('Timer',3)" class="Timer">
           <i class="fa fa-hourglass"></i>
         </button>
       </div>
-      <div class="sliderContainer">
+      <div class="sliderContainer canHorizontalDraging">
         <div class="slider">
           <div is="Alarm"></div>
           <div is="Clock"></div>
@@ -544,11 +549,265 @@
         el: "#container",
         data: {
           tabArray: ["Alarm","Clock","StopWatch","Timer"],
+          particleArray: [],
+          lastEvent: null,
         },
         mounted(){
           this.scrollListner();
+          this.careateTachnes();
         },
         methods:{
+          careateTachnes(){
+            var verticalElements = document.querySelectorAll(".canVerticalDraging");
+            verticalElements.forEach(x => this.verticalDragScroller(x)) 
+            var horizontalElements = document.querySelectorAll(".canHorizontalDraging");
+            horizontalElements.forEach(x => {
+              this.horizontalDragScroller(x);
+            })
+          },
+          horizontalDragScroller(el){
+            const scollElement = el;
+
+            function Particle( elem ) {
+              this.element = elem;
+              this.positionX = elem.scrollLeft * -1;
+              this.dragPositionX = elem.scrollLeft * -1;
+              this.velocityX = 0;
+              this.friction = 0.90;
+              this.accelX = 0;
+              this.isDragging = false;
+              this.lastPosition = 0;
+            }
+
+            Particle.prototype.render = function() {
+              if (canMove) {
+                if (this.positionX *-1 <=0) { 
+                  this.positionX = 0;
+                }
+                if (this.positionX * -1 > this.element.scrollWidth) { 
+                  this.positionX = this.element.scrollWidth*-1;
+                }
+                this.element.scrollLeft = (this.positionX * -1).toFixed(0);
+              }
+            };
+
+            Particle.prototype.update = function() {
+              this.applyDragForce();
+              this.integrate();
+            };
+
+            Particle.prototype.integrate = function() {
+              this.velocityX += this.accelX;
+              this.velocityX *= this.friction;
+              this.positionX += this.velocityX;
+              this.accelX = 0;
+            };
+
+            Particle.prototype.applyForce = function( force ) {
+              this.accelX += force * 0.5;
+            };
+
+            Particle.prototype.applyDragForce = function() {
+              if ( !this.isDragging ) {
+                return;
+              }
+              var dragVelocity = this.dragPositionX - this.positionX;
+              var dragForce = dragVelocity - this.velocityX;
+              this.applyForce( dragForce );
+            };
+
+            var it = this;
+            var particle;
+
+            document.addEventListener( 'DOMContentLoaded', init(), false );
+
+            function init() {
+              particle = new Particle( scollElement );
+              it.particleArray.push({"particle":particle, "name":scollElement.parentNode.className});
+              scollElement.addEventListener( 'mousedown', onMousedown, false );
+            }
+
+            var dragForce = 0;
+
+            function animate() {
+              if (scollElement.classList.item("hSnap")) {scollElement.classList.remove("hSnap")};
+              particle.update();
+              particle.render();
+              var AnimationFrame = requestAnimationFrame( animate );
+              if (isDragging && !particle.isDragging && particle.positionX != 0 && particle.lastPosition == particle.positionX.toFixed(0)) {
+                cancelAnimationFrame( AnimationFrame );                      
+                isDragging = false ;
+                scollElement.classList.add("hSnap");
+                particle.positionX = scollElement.scrollLeft *-1;
+                particle.dragPositionX = scollElement.scrollLeft *-1; 
+              } 
+              particle.lastPosition = particle.positionX.toFixed(0);
+            }
+
+            var dragStartX;
+            var dragStartY;
+            var canMove;
+            var particleDragStartX;
+            var isDragging = false;
+
+            function onMousedown( event ) {
+              it.lastEvent = event;
+              if([... event.target.classList].find(x => x == "hour" || x == "minut" || x == "second") != null){
+                return
+              }
+              if (!isDragging) {
+                animate()
+              }
+              event.preventDefault();
+              dragStartX = event.pageX;
+              dragStartY = event.pageY;
+              particleDragStartX = particle.positionX;
+              particle.isDragging = true;
+              isDragging = true;
+              setDragPositionX( event );
+              window.addEventListener( 'mousemove', onMousemove, false );
+              window.addEventListener( 'mouseup', onMouseup, false );
+            }
+
+            function onMousemove( event ) {
+              setDragPositionX( event );
+              canMove = Math.abs(event.pageY - dragStartY)<Math.abs(event.pageX - dragStartX);
+            }
+
+            function setDragPositionX( event ) {
+              var moveX = event.pageX - dragStartX;
+              particle.dragPositionX = particleDragStartX + moveX;
+            }
+
+            function onMouseup() {
+              it.lastEvent = event;
+              particle.isDragging = false;
+              window.removeEventListener( 'mousemove', onMousemove, false );
+              window.removeEventListener( 'mouseup', onMouseup, false );
+            }
+          },
+          verticalDragScroller(el){
+            const scollElement = el;
+
+            function Particle( elem ) {
+              this.element = elem;
+              this.positionY = elem.scrollTop * -1;
+              this.dragPositionY = elem.scrollTop * -1;
+              this.velocityY = 0;
+              this.friction = 0.97;
+              this.accelY = 0;
+              this.isDragging = false;
+              this.lastPosition = 0;
+            }
+
+            Particle.prototype.render = function() {
+              if([...scollElement.classList].filter(x => x == "hours" || x == "minutes" || x == "seconds").length != 0){
+                if (this.positionY > 0) { 
+                  this.positionY -= this.element.scrollHeight
+                  this.dragPositionY = this.positionY
+                }
+                if (this.positionY * -1 > this.element.scrollHeight) { 
+                  this.positionY += this.element.scrollHeight
+                  this.dragPositionY = this.positionY
+                }
+              } else {
+                if (this.positionY *-1 <=0) { 
+                  this.positionY = 0;
+                  return
+                }
+                if (this.positionY * -1 > this.element.scrollHeight) { 
+                  this.positionY = this.element.scrollWidth*-1;
+                  return
+                }
+              }
+              this.element.scrollTop = (this.positionY * -1).toFixed(1);
+            };
+
+            Particle.prototype.update = function() {
+              this.applyDragForce();
+              this.integrate();
+            };
+
+            Particle.prototype.integrate = function() {
+              this.velocityY += this.accelY;
+              this.velocityY *= this.friction;
+              this.positionY += this.velocityY;
+              this.accelY = 0;
+            };
+
+            Particle.prototype.applyForce = function( force ) {
+              this.accelY += force;
+            };
+
+            Particle.prototype.applyDragForce = function() {
+              if ( !this.isDragging ) {
+                return;
+              }
+              var dragVelocity = this.dragPositionY - this.positionY;
+              var dragForce = dragVelocity - this.velocityY;
+              this.applyForce( dragForce );
+            };
+
+
+            var particle;
+
+            document.addEventListener( 'DOMContentLoaded', init(this), false );
+
+            function init(it) {
+              particle = new Particle( scollElement );
+              it.particleArray.push({"particle":particle, "name":scollElement.parentNode.className});
+              scollElement.addEventListener( 'mousedown', onMousedown, false );
+            }
+
+            var dragForce = 0;
+
+            function animate() {
+              particle.update();
+              particle.render();
+              var AnimationFrame = requestAnimationFrame( animate );
+              if (isDragging && !particle.isDragging && particle.positionY != 0 && particle.lastPosition == particle.positionY.toFixed(1)) {
+                cancelAnimationFrame( AnimationFrame );                      
+                isDragging = false 
+              } 
+              particle.lastPosition = particle.positionY.toFixed(1);
+            }
+
+            var dragStartY;
+            var dragStartX;
+            var particleDragStartY;
+            var isDragging = false;
+
+            function onMousedown( event ) {
+              if (!isDragging) {
+                animate()
+              }
+              event.preventDefault();
+              dragStartY = event.pageY;
+              dragStartX = event.pageX;
+              particleDragStartY = particle.positionY;
+              particle.isDragging = true;
+              isDragging = true;
+              setDragPositionX( event );
+              window.addEventListener( 'mousemove', onMousemove, false );
+              window.addEventListener( 'mouseup', onMouseup, false );
+            }
+
+            function onMousemove( event ) {
+              setDragPositionX( event );
+
+            }
+
+            function setDragPositionX( event ) {
+              var moveY = event.pageY - dragStartY;
+              particle.dragPositionY = particleDragStartY + moveY;
+            }
+
+            function onMouseup() {
+              particle.isDragging = false;
+              window.removeEventListener( 'mousemove', onMousemove, false );
+              window.removeEventListener( 'mouseup', onMouseup, false );
+            }
+          },
           scrollListner(){
             document.querySelector(".sliderContainer").addEventListener("scroll",(el) =>{
               var lastSelected = document.querySelector(".selected");
@@ -558,7 +817,11 @@
               newSelected.classList.add("selected");
             });
           },
-          selectTab(className){
+          selectTab(className,number){
+            let position = (document.querySelector(".slider").scrollWidth / document.querySelector(".slider").children.length) * number;
+            let element  = this.particleArray.filter(x => x.name == "").map(x => x.particle)[0]
+            element.positionX = position *-1;
+            element.dragPositionX = position *-1;
             document.querySelector(".slider ."+className).scrollIntoView({behavior: "smooth"});
           },
         },
@@ -578,7 +841,7 @@
             methods:{
               openPopup(object){
                 this.popupShow = true;
-                let particleArray = this.$children.find(x => x.$vnode.componentOptions.tag = "Popup").particleArray;
+                let particleArray = ClockVueApp.particleArray.filter(x => x.name == "AlarmTimePicker").map(x => x.particle);
                 if (object != null){
                   this.editAlarm = object;
                   Vue.nextTick(() => {
@@ -700,128 +963,14 @@
                 data: function(){
                   return{
                     infoArray: [[".hours","hour",23],[".minutes","minut",59]],
-                    particleArray: ["0","1"],
                   }
                 },
                 mounted(){
                   this.createTime();
                   this.createTime();
-                  this.dragScroller();
-                  this.scrollLoop();
                   this.addScrollSnap();
                 },
                 methods:{
-                  dragScroller(){
-                    this.infoArray.forEach( (el,idx) => {
-                        const scollElement = document.querySelector(".AlarmTimePicker " +el[0]);
-
-                        function Particle( elem ) {
-                          this.element = elem;
-                          this.positionY = elem.scrollTop * -1;
-                          this.dragPositionY = elem.scrollTop * -1;
-                          this.velocityY = 0;
-                          this.friction = 0.97;
-                          this.accelY = 0;
-                          this.isDragging = false;
-                          this.lastPosition = 0;
-                        }
-
-                        Particle.prototype.render = function() {
-                          if (this.positionY > 0) { 
-                            this.positionY -= this.element.scrollHeight
-                            this.dragPositionY = this.positionY
-                          }
-                          if (this.positionY * -1 > this.element.scrollHeight) { 
-                            this.positionY += this.element.scrollHeight
-                            this.dragPositionY = this.positionY
-                          }
-                          this.element.scrollTop = (this.positionY * -1).toFixed(1);
-                        };
-
-                        Particle.prototype.update = function() {
-                          this.applyDragForce();
-                          this.integrate();
-                        };
-
-                        Particle.prototype.integrate = function() {
-                          this.velocityY += this.accelY;
-                          this.velocityY *= this.friction;
-                          this.positionY += this.velocityY;
-                          this.accelY = 0;
-                        };
-
-                        Particle.prototype.applyForce = function( force ) {
-                          this.accelY += force;
-                        };
-
-                        Particle.prototype.applyDragForce = function() {
-                          if ( !this.isDragging ) {
-                            return;
-                          }
-                          var dragVelocity = this.dragPositionY - this.positionY;
-                          var dragForce = dragVelocity - this.velocityY;
-                          this.applyForce( dragForce );
-                        };
-
-
-                        var particle;
-
-                        document.addEventListener( 'DOMContentLoaded', init(this), false );
-
-                        function init(it) {
-                          particle = new Particle( scollElement );
-                          it.particleArray[idx] = particle
-                          scollElement.addEventListener( 'mousedown', onMousedown, false );
-                        }
-
-                        var dragForce = 0;
-
-                        function animate() {
-                          particle.update();
-                          particle.render();
-                          var AnimationFrame = requestAnimationFrame( animate );
-                          if (isDragging && !particle.isDragging && particle.positionY != 0 && particle.lastPosition == particle.positionY.toFixed(1)) {
-                            cancelAnimationFrame( AnimationFrame );                      
-                            isDragging = false 
-                          } 
-                          particle.lastPosition = particle.positionY.toFixed(1);
-                        }
-
-                        var dragStartY;
-                        var particleDragStartY;
-                        var isDragging = false;
-
-                        function onMousedown( event ) {
-                          if (!isDragging) {
-                            animate()
-                          }
-                          event.preventDefault();
-                          dragStartY = event.pageY;
-                          particleDragStartY = particle.positionY;
-                          particle.isDragging = true;
-                          isDragging = true;
-                          setDragPositionX( event );
-                          window.addEventListener( 'mousemove', onMousemove, false );
-                          window.addEventListener( 'mouseup', onMouseup, false );
-                        }
-
-                        function onMousemove( event ) {
-                          setDragPositionX( event );
-                        }
-
-                        function setDragPositionX( event ) {
-                          var moveY = event.pageY - dragStartY;
-                          particle.dragPositionY = particleDragStartY + moveY;
-                        }
-
-                        function onMouseup() {
-                          particle.isDragging = false;
-                          window.removeEventListener( 'mousemove', onMousemove, false );
-                          window.removeEventListener( 'mouseup', onMouseup, false );
-                        }
-
-                    })
-                  },
                   createTime(){
                     this.infoArray.forEach(el => {
                       var container = document.querySelector(".AlarmTimePicker " + el[0]);
@@ -832,22 +981,7 @@
                         container.prepend(element);
                       }
                     })
-                  },
-                  scrollLoop(){
-                    this.infoArray.forEach(el => {
-                      const list = document.querySelector(".AlarmTimePicker " +el[0]);
-                      list.addEventListener("scroll" , e => {
-                          if(list.scrollTop < 10){
-                              list.scrollTop += list.scrollHeight  - 300;
-                          }
-                          if(list.scrollTop > list.scrollHeight - 300){
-                              list.scrollTop -= list.scrollHeight -1 ;                          
-                          }
-                          
-                      })
-                    })
-                  },
-                  addScrollSnap(){
+                  },                  addScrollSnap(){
                     this.infoArray.forEach(el => {
                       let hours = document.querySelector(".AlarmTimePicker " +el[0]);
                       var timer = null;
@@ -892,9 +1026,9 @@
                   <div class="popupSadow">
                     <div class="popup">
                       <div class="AlarmTimePicker">
-                        <div class="hours"></div>
+                        <div class="hours canVerticalDraging"></div>
                         <div class="line"></div>
-                        <div class="minutes"></div>
+                        <div class="minutes canVerticalDraging"></div>
                       </div>
                       <div class="btn">
                         <button class="save" title="save" @click="$emit('addAlarm')">
@@ -940,8 +1074,8 @@
             },
             template:`
               <div class="Alarm">
-                <div v-show="!alarmWork" style="height:100%">
-                  <div class="alarmContainer">
+                <div v-show="!alarmWork" class="AlarmChild" style="height:100%">
+                  <div class="alarmContainer canVerticalDraging">
                     <div v-for="el,idx in AlarmArray" is="AlarmElement" :obj="el" :key="idx" @edit="openPopup(el)"></div>
                   </div>
                   <div class="btn">
@@ -1135,7 +1269,7 @@
                   <p id="StopWatchString">{{StopWatchString}}</p>
                   <p id="curTime">Current time</p>
                 </div>
-                <div id="log">     
+                <div id="log" class="canVerticalDraging">     
                 </div>
                 <div class="btn">
                   <div id="startBtn">
@@ -1181,134 +1315,8 @@
               document.querySelector(".timePicker .minutes").scrollTop = document.querySelector(".timePicker .minutes").scrollHeight * 0.485;
               document.querySelector(".timePicker .seconds").scrollTop = document.querySelector(".timePicker .seconds").scrollHeight * 0.485;
               this.addScrollSnap();
-              this.scrollLoop();
-              this.dragScroller();
             },
             methods:{
-              dragScroller(){
-                this.infoArray.forEach( el => {
-                    const scollElement = document.querySelector(".timePicker " +el[0]);
-
-                    function Particle( elem ) {
-                      this.element = elem;
-                      this.positionY = elem.scrollTop * -1;
-                      this.dragPositionY = elem.scrollTop * -1;
-                      this.velocityY = 0;
-                      this.friction = 0.97;
-                      this.accelY = 0;
-                      this.isDragging = false;
-                      this.lastPosition = 0;
-                    }
-
-                    Particle.prototype.render = function() {
-                      if (this.positionY > 0) { 
-                        this.positionY -= this.element.scrollHeight
-                        this.dragPositionY = this.positionY
-                      }
-                      if (this.positionY * -1 > this.element.scrollHeight) { 
-                        this.positionY += this.element.scrollHeight
-                        this.dragPositionY = this.positionY
-                      }
-                      this.element.scrollTop = (this.positionY * -1).toFixed(1);
-                    };
-
-                    Particle.prototype.update = function() {
-                      this.applyDragForce();
-                      this.integrate();
-                    };
-
-                    Particle.prototype.integrate = function() {
-                      this.velocityY += this.accelY;
-                      this.velocityY *= this.friction;
-                      this.positionY += this.velocityY;
-                      this.accelY = 0;
-                    };
-
-                    Particle.prototype.applyForce = function( force ) {
-                      this.accelY += force;
-                    };
-
-                    Particle.prototype.applyDragForce = function() {
-                      if ( !this.isDragging ) {
-                        return;
-                      }
-                      var dragVelocity = this.dragPositionY - this.positionY;
-                      var dragForce = dragVelocity - this.velocityY;
-                      this.applyForce( dragForce );
-                    };
-
-
-                    var particle;
-
-                    document.addEventListener( 'DOMContentLoaded', init, false );
-
-                    function init() {
-                      particle = new Particle( scollElement );
-                      scollElement.addEventListener( 'mousedown', onMousedown, false );
-                    }
-
-                    var dragForce = 0;
-
-                    function animate() {
-                      particle.update();
-                      particle.render();
-                      var AnimationFrame = requestAnimationFrame( animate );
-                      if (isDragging && !particle.isDragging && particle.positionY != 0 && particle.lastPosition == particle.positionY.toFixed(1)) {
-                        cancelAnimationFrame( AnimationFrame );                      
-                        isDragging = false 
-                      } 
-                      particle.lastPosition = particle.positionY.toFixed(1);
-                    }
-
-                    var dragStartY;
-                    var particleDragStartY;
-                    var isDragging = false;
-
-                    function onMousedown( event ) {
-                      if (!isDragging) {
-                        animate()
-                      }
-                      event.preventDefault();
-                      dragStartY = event.pageY;
-                      particleDragStartY = particle.positionY;
-                      particle.isDragging = true;
-                      isDragging = true;
-                      setDragPositionX( event );
-                      window.addEventListener( 'mousemove', onMousemove, false );
-                      window.addEventListener( 'mouseup', onMouseup, false );
-                    }
-
-                    function onMousemove( event ) {
-                      setDragPositionX( event );
-                    }
-
-                    function setDragPositionX( event ) {
-                      var moveY = event.pageY - dragStartY;
-                      particle.dragPositionY = particleDragStartY + moveY;
-                    }
-
-                    function onMouseup() {
-                      particle.isDragging = false;
-                      window.removeEventListener( 'mousemove', onMousemove, false );
-                      window.removeEventListener( 'mouseup', onMouseup, false );
-                    }
-
-                })
-              },
-              scrollLoop(){
-                this.infoArray.forEach(el => {
-                  const list = document.querySelector(".timePicker " +el[0]);
-                  list.addEventListener("scroll" , e => {
-                      if(list.scrollTop < 10){
-                          list.scrollTop += list.scrollHeight  - 300;
-                      }
-                      if(list.scrollTop > list.scrollHeight - 300){
-                          list.scrollTop -= list.scrollHeight -1 ;                          
-                      }
-                      
-                  })
-                })
-              },
               addScrollSnap(){
                 this.infoArray.forEach(el => {
                   let hours = document.querySelector(".timePicker " +el[0]);
@@ -1360,6 +1368,17 @@
               startTimer(){
                 var selected = document.querySelectorAll(".timePicker .selectedTimerTime");
 
+                var curArray = ["h","m","s"];
+                this.currentTime = "Total ";
+                curArray.forEach((el,i) => {
+                  if (parseInt(selected[i].innerText) != 0) {
+                    this.currentTime += parseInt(selected[i].innerText) + " " +el+ " ";
+                  } 
+                })
+                if(this.currentTime == "Total "){
+                  return
+                }
+
                 var timePicker = document.querySelector(".Timer .timePicker");
                 timePicker.classList.add("hide");
 
@@ -1381,13 +1400,6 @@
                 this.timeEnd.setMinutes(this.timeEnd.getMinutes() + parseInt(selected[1].innerText));
                 this.timeEnd.setSeconds(this.timeEnd.getSeconds() + parseInt(selected[2].innerText));
 
-                var curArray = ["h","m","s"];
-                this.currentTime = "Total ";
-                curArray.forEach((el,i) => {
-                  if (parseInt(selected[i].innerText) != 0) {
-                    this.currentTime += parseInt(selected[i].innerText) + " " +el+ " "
-                  }
-                })
                 this.totalTime = this.timeEnd - new Date();
 
                 this.interval = setInterval(this.updateTime,10);
@@ -1492,11 +1504,11 @@
             template:`
               <div class="Timer">
                 <div class="timePicker">
-                  <div class="hours"></div>
+                  <div class="hours canVerticalDraging"></div>
                   <div class="line"></div>
-                  <div class="minutes"></div>
+                  <div class="minutes canVerticalDraging"></div>
                   <div class="line"></div>
-                  <div class="seconds"></div>
+                  <div class="seconds canVerticalDraging"></div>
                 </div>
                 <div class="timerView hide">
                   <svg class="progressbar" width="300" height="300">
